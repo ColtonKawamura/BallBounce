@@ -39,3 +39,6 @@ This effect "knob" is expected to be a function of dissipation (damping factor, 
 # Future Work
 
 Intent is to run simulations and sweep over parameters to find a relation between increased kinetic energy recover and system parameters isolate main causes of the recovery.
+
+- [ ] Enable separate parameters for chain-layer from free particle
+- [ ] Add hertzian contacts
