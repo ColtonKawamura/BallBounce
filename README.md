@@ -29,7 +29,7 @@ This results in a a significant rearwards (upward) velocity from the reflection 
 # Damped Effect
 
 If there are many layers to the stack, wave will be dissipated by the time it would have reflect back, resulting in no recovery of kinetic energy.
-<img width="1954" height="1174" alt="sim1d_longchain" src="https://github.com/user-attachments/assets/249fcb75-14e7-4ad3-aae3-560978aa4add" />
+<img width="1954" height="1174" alt="sim1d" src="https://github.com/user-attachments/assets/14d3381a-a7af-4117-bfdc-7a7fbdc6ee2a" />
 <img width="1527" height="919" alt="velocity_longChain" src="https://github.com/user-attachments/assets/d348cb83-1804-4090-b005-6ad0236d6e4b" />
 <img width="1527" height="919" alt="kinetic_energy_longChain" src="https://github.com/user-attachments/assets/55583794-8961-4b1c-9270-8ed0577bdcaf" />
 
