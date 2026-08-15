@@ -25,12 +25,13 @@ This results in a a significant rearwards (upward) velocity from the reflection 
 
 <img width="1527" height="919" alt="velocity" src="https://github.com/user-attachments/assets/013f1744-bb84-4c3d-a033-cc077b416786" />
 
-# Damped Effect
+# Non-Effect
 
-If there are many layers to the stack, wave will be dissipated by the time it would have reflect back, resulting in no recovery of kinetic energy.
+If there are many layers to the stack, wave will either be dissipated by the time it would have reflect back or the wave will reach the impactor at a time that would result in constructive interference with it's oscillation from the impact.
+
+Either way, the results in no significant recovery of kinetic energy.
 <img width="1954" height="1174" alt="sim1d" src="https://github.com/user-attachments/assets/14d3381a-a7af-4117-bfdc-7a7fbdc6ee2a" />
 <img width="1283" height="834" alt="nonconst_ke" src="https://github.com/user-attachments/assets/54813d03-68f1-42a1-b184-8b049be70885" />
-
 
 
 This effect "knob" is expected to be a function of dissipation (damping factor, number of layers, etc). 
@@ -39,5 +40,4 @@ This effect "knob" is expected to be a function of dissipation (damping factor, 
 
 Intent is to run simulations and sweep over parameters to find a relation between increased kinetic energy recover and system parameters isolate main causes of the recovery.
 
-- [ ] Enable separate parameters for chain-layer from free particle
 - [ ] Add hertzian contacts
