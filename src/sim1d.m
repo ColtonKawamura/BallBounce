@@ -9,6 +9,9 @@ function sim1d(scalHeightDrop, scalDamp, scalPressure, scalSpringConst, scalNumP
         scalDiam (1,1) double
         scalMass (1,1) double
         scalGravity (1,1) double
+        options.scalDampBall    (1,1) double = scalDamp        % defaults to chain value
+        options.scalMassBall    (1,1) double = scalMass
+        options.scalSpringBall  (1,1) double = scalSpringConst % spring between ball and chain
         options.visSim (1,1) logical = false
     end
 
@@ -26,14 +29,6 @@ function sim1d(scalHeightDrop, scalDamp, scalPressure, scalSpringConst, scalNumP
     scalLogInterval = 100;
 
 %%% temp initial parameters
-    % scalNumPart = 5;
-    % scalDamp = .1;
-    % scalDiam =1;
-    % scalMass = 1;
-    % scalSpringConst = 1;
-    % scalHeightDrop = 10;
-    % scalGravity = 3;
-    % scalPressure = .00001;
     if options.visSim
         figVis = figure('Name', '1D Simulation');
         gifPath = fullfile('~/Desktop/', 'sim1d.gif');
@@ -48,6 +43,10 @@ function sim1d(scalHeightDrop, scalDamp, scalPressure, scalSpringConst, scalNumP
     scalTimeStepHalfSquared = .5 * scalTimeStep^2;
 
 %% pre allocations
+    vecMass = ones(scalNumPart,1)*scalMass;
+    vecMass(1) = options.scalMassBall;
+    vecDamp = ones(scalNumPart,1)*scalDamp;
+    vecDamp(1) = options.scalDampBall;
     vecPosX = ((0:scalNumPart-1) * scalDiam * (1 - scalPressure))';
     vecPosX(1) = vecPosX(2) - scalDiam - scalHeightDrop;  % <-- ADD THIS LINE
     vecVelocityX = zeros(scalNumPart,1);
@@ -72,12 +71,15 @@ function sim1d(scalHeightDrop, scalDamp, scalPressure, scalSpringConst, scalNumP
     vecSour = [(1:scalNumPart-1)'; (2:scalNumPart)']; % index of particle on one end of spring
     vecDest = [(2:scalNumPart)'; (1:scalNumPart-1)']; % index of particle on other end of spring
     vecDistRest = repmat(scalDiam * (1 - scalPressure), 2*(scalNumPart-1), 1);
+    vecSpringConst        = ones(2*(scalNumPart-1), 1) * scalSpringConst;
+    vecSpringConst(1)     = options.scalSpringBall;  % sour=1→dest=2
+    vecSpringConst(scalNumPart) = options.scalSpringBall;  % reverse: sour=2→dest=1
     
 %% GPU transfer
     if useGPU
         vecPosX = gpuArray(vecPosX);
         vecVelocityX = gpuArray(vecVelocityX);
-        vecAccelerationX = gpuArray(vecAccelerationX);
+        % vecAccelerationX = gpuArray(vecAccelerationX);
         vecAccelerationX_old = gpuArray(vecAccelerationX_old);
     end
 
@@ -88,7 +90,7 @@ function sim1d(scalHeightDrop, scalDamp, scalPressure, scalSpringConst, scalNumP
     if savePosVel
         matPosX(:, 1) = gather(vecPosX);
         matVelX(:, 1) = gather(vecVelocityX);
-        matAccelXX(:, 1) = gather(vecAccelerationX_old);
+        matAccelX(:, 1) = gather(vecAccelerationX_old);
     end
     for step = 2:length(vecTime)
 
@@ -97,78 +99,78 @@ function sim1d(scalHeightDrop, scalDamp, scalPressure, scalSpringConst, scalNumP
                 step, scalMaxTimeSteps, 100*step/scalMaxTimeSteps, toc(ticLoop));
         end
 
-    %% update positions and velocities
-    vecPosX = vecPosX + vecVelocityX*scalTimeStep + vecAccelerationX_old.*scalTimeStepHalfSquared;
-    vecVelocityX = vecVelocityX + vecAccelerationX_old* scalTimeStepHalf;
+        %% update positions and velocities
+        vecPosX = vecPosX + vecVelocityX*scalTimeStep + vecAccelerationX_old.*scalTimeStepHalfSquared;
+        vecVelocityX = vecVelocityX + vecAccelerationX_old* scalTimeStepHalf;
 
-    %% update forces and accelerations
-    vecContDist = vecPosX(vecDest) - vecPosX(vecSour);        % signed displacement src→dst
-    vecDistCurr = abs(vecContDist);                            % scalar distance
-    vecOverlapX = vecDistRest - vecDistCurr;                   % positive when compressed
-    vecForceMag = -scalSpringConst .* (vecDistRest./vecDistCurr - 1) .* (vecOverlapX > 0);
-    vecForceEdge = vecForceMag .* vecContDist;                 % force on source particle
-    vecForceX = accumarray(vecSour, vecForceEdge, [scalNumPart, 1]);
+        %% update forces and accelerations
+        vecForceEdge = forceLaw(vecPosX, vecSour, vecDest, vecDistRest, vecSpringConst);
+        % sum values in vecForceEdge by the groups specified in vecSour
+        vecForceX = accumarray(vecSour, vecForceEdge, [scalNumPart, 1]); 
 
-    %% damping force
-    vecDampForce = -scalDamp * vecVelocityX;
-    vecForceX = vecForceX + vecDampForce;
+        %% damping force
+        vecDampForce = -vecDamp .* vecVelocityX;
+        vecForceX = vecForceX + vecDampForce;
 
-    %% gravity pull particle 1
-    vecForceX(1) = vecForceX(1) + scalMass * scalGravity;
+        %% gravity pull particle 1
+        vecForceX(1) = vecForceX(1) + vecMass(1) * scalGravity;
 
-    %% fix endpoints
-    vecForceX(scalNumPart) = 0;% the bottom (right) particle is fixed
+        %% fix endpoints
+        vecForceX(scalNumPart) = 0;% the bottom (right) particle is fixed
 
-    %% update acceleration and complete velocity verlet
-    vecAccelerationX = vecForceX / scalMass;
-    vecVelocityX = vecVelocityX + vecAccelerationX * scalTimeStepHalf;
-    vecAccelerationX_old = vecAccelerationX;
+        %% update acceleration and complete velocity verlet
+        vecAccelerationX = vecForceX ./ vecMass;
+        vecVelocityX = vecVelocityX + vecAccelerationX * scalTimeStepHalf;
+        vecAccelerationX_old = vecAccelerationX;
 
-    %% again depabtable, 
-    if savePosVel
-        matPosX(:, step) = gather(vecPosX); % gather() pulls from GPU to CPU
-        matVelX(:, step) = gather(vecVelocityX);
-        matAccelX(:, step) = gather(vecVelocityX);
-    end
-
-    if options.visSim && mod(step, scalVisInterval) == 0
-        figure(figVis); cla;
-        for p = 1:scalNumPart
-            theta = linspace(0, 2*pi, 64);
-            cx = gather(vecPosX(p));
-            plot(cx + (scalDiam/2)*cos(theta), (scalDiam/2)*sin(theta), 'w');
-            hold on;
+        %% again depabtable, 
+        if savePosVel
+            matPosX(:, step) = gather(vecPosX); % gather() pulls from GPU to CPU
+            matVelX(:, step) = gather(vecVelocityX);
+            matAccelX(:, step) = gather(vecVelocityX);
         end
-        axis equal;
-        drawnow;
 
-        % capture frame
-        frame = getframe(figVis);
-        img   = frame2im(frame);
-        [imgInd, cmap] = rgb2ind(img, 256);
-        if step == scalVisInterval  % first frame
-            imwrite(imgInd, cmap, gifPath, 'gif', 'Loopcount', inf, 'DelayTime', 0.05);
-        else
-            imwrite(imgInd, cmap, gifPath, 'gif', 'WriteMode', 'append', 'DelayTime', 0.05);
+        if options.visSim && mod(step, scalVisInterval) == 0
+            figure(figVis); cla;
+            for p = 1:scalNumPart
+                theta = linspace(0, 2*pi, 64);
+                cx = gather(vecPosX(p));
+                plot(cx + (scalDiam/2)*cos(theta), (scalDiam/2)*sin(theta), 'w');
+                hold on;
+            end
+            axis equal;
+            drawnow;
+
+            % capture frame
+            frame = getframe(figVis);
+            img   = frame2im(frame);
+            [imgInd, cmap] = rgb2ind(img, 256);
+            if step == scalVisInterval  % first frame
+                imwrite(imgInd, cmap, gifPath, 'gif', 'Loopcount', inf, 'DelayTime', 0.05);
+            else
+                imwrite(imgInd, cmap, gifPath, 'gif', 'WriteMode', 'append', 'DelayTime', 0.05);
+            end
         end
     end
-end
 
 %% plot
-figure;
-plot(vecTime, matVelX(1,:));
-xlabel('time', 'Interpreter', 'LaTeX', 'FontSize', 20);
-ylabel('$v_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
+    figure;
+    plot(vecTime, matVelX(1,:));
+    xlabel('time', 'Interpreter', 'LaTeX', 'FontSize', 20);
+    ylabel('$v_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
 
-figure;
-plot(vecTime, 0.5*scalMass*matVelX(1,:).^2);
-xlabel('time', 'Interpreter', 'LaTeX', 'FontSize', 20);
-ylabel('$K_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
+    figure;
+    plot(vecTime, 0.5*options.scalMassBall*matVelX(1,:).^2);
+    xlabel('time', 'Interpreter', 'LaTeX', 'FontSize', 20);
+    ylabel('$K_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
 
 
-    function force = forceLaw(vecOverlap, scalSpringConst)
-        % Linear (Hookean) — swap this body for Hertzian etc.
-            force = scalSpringConst * max(vecOverlap, 0);
+    function vecForce = forceLaw(vecPosX, vecSour, vecDest, vecDistRest, vecSpringConst)
+        vecContDist = vecPosX(vecDest) - vecPosX(vecSour);
+        vecDistCurr = abs(vecContDist);
+        vecOverlapX = vecDistRest - vecDistCurr;
+        vecForceMag = -vecSpringConst .* (vecDistRest./vecDistCurr - 1) .* (vecOverlapX > 0);
+        vecForce    = vecForceMag .* vecContDist;
     end
 end
 
