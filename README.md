@@ -23,15 +23,14 @@ Below is an idealized effect. If the parameters are chosen in a certain way, the
 
 This results in a a significant rearwards (upward) velocity from the reflection paired with a recover of kinetic energy.
 
-<img width="1527" height="919" alt="kinetic_energy" src="https://github.com/user-attachments/assets/b375e364-eb35-44de-a367-74799eaeede6" />
 <img width="1527" height="919" alt="velocity" src="https://github.com/user-attachments/assets/013f1744-bb84-4c3d-a033-cc077b416786" />
 
 # Damped Effect
 
 If there are many layers to the stack, wave will be dissipated by the time it would have reflect back, resulting in no recovery of kinetic energy.
 <img width="1954" height="1174" alt="sim1d" src="https://github.com/user-attachments/assets/14d3381a-a7af-4117-bfdc-7a7fbdc6ee2a" />
-<img width="1527" height="919" alt="velocity_longChain" src="https://github.com/user-attachments/assets/d348cb83-1804-4090-b005-6ad0236d6e4b" />
-<img width="1527" height="919" alt="kinetic_energy_longChain" src="https://github.com/user-attachments/assets/55583794-8961-4b1c-9270-8ed0577bdcaf" />
+<img width="1283" height="834" alt="nonconst_ke" src="https://github.com/user-attachments/assets/54813d03-68f1-42a1-b184-8b049be70885" />
+
 
 
 This effect "knob" is expected to be a function of dissipation (damping factor, number of layers, etc). 
