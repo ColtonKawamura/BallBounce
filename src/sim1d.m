@@ -1,18 +1,17 @@
-function sim1d(scalHeightDrop, scalDamp, scalPressure, scalSpringConst, scalNumPart, scalDiam, scalMass, scalGravity, options)
+function sim1d(scalHeightDrop, scalDamp, scalSpringConst, scalNumPart, scalDiam, scalMass, options)
 
     arguments
         scalHeightDrop (1,1) double
         scalDamp (1,1) double
-        scalPressure (1,1) double
         scalSpringConst (1,1) double
         scalNumPart (1,1) double
         scalDiam (1,1) double
         scalMass (1,1) double
-        scalGravity (1,1) double
         options.scalDampBall    (1,1) double = scalDamp        % defaults to chain value
         options.scalMassBall    (1,1) double = scalMass
         options.scalSpringBall  (1,1) double = scalSpringConst % spring between ball and chain
         options.visSim (1,1) logical = false
+        options scalPressure (1,1) double = 0.0
     end
 
 
@@ -35,12 +34,14 @@ function sim1d(scalHeightDrop, scalDamp, scalPressure, scalSpringConst, scalNumP
     end
 
 %% physical constant calculations
-     scalNatFreq = sqrt(scalSpringConst/scalMass);
+    scalNatFreq = sqrt(scalSpringConst/scalMass);
+    scalGravity = scalNatFreq^2 * scalDiam;
     scalTimeTotal = 2*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq); % time to drop + 1/2  period
     scalFreqCollision = 1/scalTimeTotal;
     scalTimeStep = pi*sqrt(scalMass/scalSpringConst)*0.05; % this is 1/1000 of a period
     scalTimeStepHalf = .5 * scalTimeStep;
     scalTimeStepHalfSquared = .5 * scalTimeStep^2;
+
 
 %% pre allocations
     vecMass = ones(scalNumPart,1)*scalMass;
@@ -55,7 +56,7 @@ function sim1d(scalHeightDrop, scalDamp, scalPressure, scalSpringConst, scalNumP
     vecForceX = zeros(scalNumPart,1);
     vecTime = (0:scalTimeStep:scalTimeTotal);
     scalMaxTimeSteps = length( vecTime );
-    scalVisInterval = .005*scalSpringConst; % plot every 50 steps
+    scalVisInterval = .0005*scalSpringConst; % plot every 50 steps
 
     % depabtable if you want these - more memory for bigger sims
     if savePosVel
@@ -112,8 +113,8 @@ function sim1d(scalHeightDrop, scalDamp, scalPressure, scalSpringConst, scalNumP
         vecDampForce = -vecDamp .* vecVelocityX;
         vecForceX = vecForceX + vecDampForce;
 
-        %% gravity pull particle 1
-        vecForceX(1) = vecForceX(1) + vecMass(1) * scalGravity;
+        %% gravity pull all particles
+        vecForceX = vecForceX + vecMass * scalGravity;
 
         %% fix endpoints
         vecForceX(scalNumPart) = 0;% the bottom (right) particle is fixed
