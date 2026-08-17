@@ -166,6 +166,27 @@ function sim1d(scalHeightDrop, scalDamp, scalSpringConst, scalNumPart, scalDiam,
     xlabel('time', 'Interpreter', 'LaTeX', 'FontSize', 20);
     ylabel('$K_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
 
+    %% analysis
+    [KEpeaks, KEpeakIdx] = findpeaks(0.5*options.scalMassBall*matVelX(1,:).^2, ...
+        'SortStr', 'descend', 'NPeaks', 2);
+
+    % sort by time order (not amplitude)
+    [KEpeakIdx, sortIdx] = sort(KEpeakIdx);
+    KEpeaks = KEpeaks(sortIdx);
+
+    scalKE_before = KEpeaks(1);
+    scalKE_after  = KEpeaks(2);
+    scalRatioKE   = scalKE_after / scalKE_before;
+
+    % wave speed: round trip through (N-1) gaps
+    scalDeltaT    = vecTime(KEpeakIdx(2)) - vecTime(KEpeakIdx(1));
+    scalWaveSpeed = 2 * (scalNumPart - 1) * scalDiam / scalDeltaT;
+
+    fprintf('[analysis] KE before: %.4f\n', scalKE_before);
+    fprintf('[analysis] KE after:  %.4f\n', scalKE_after);
+    fprintf('[analysis] KE ratio:  %.4f\n', scalRatioKE);
+    fprintf('[analysis] Delta t:   %.4f\n', scalDeltaT);
+    fprintf('[analysis] Wave speed: %.4f\n', scalWaveSpeed);
 
     function vecForce = forceLaw(vecPosX, vecSour, vecDest, vecDistRest, vecSpringConst)
         vecContDist = vecPosX(vecDest) - vecPosX(vecSour);
