@@ -11,7 +11,8 @@ function sim1d(scalHeightDrop, scalDamp, scalSpringConst, scalNumPart, scalDiam,
         options.scalMassBall    (1,1) double = scalMass
         options.scalSpringBall  (1,1) double = scalSpringConst % spring between ball and chain
         options.visSim (1,1) logical = false
-        options scalPressure (1,1) double = 0.0
+        options.scalPressure (1,1) double = 0.0
+        options.scalGravityScale (1,1) double = 0.0001 % should be smaller than compression from impact
     end
 
 
@@ -35,7 +36,7 @@ function sim1d(scalHeightDrop, scalDamp, scalSpringConst, scalNumPart, scalDiam,
 
 %% physical constant calculations
     scalNatFreq = sqrt(scalSpringConst/scalMass);
-    scalGravity = scalNatFreq^2 * scalDiam;
+    scalGravity = options.scalGravityScale*scalNatFreq^2*2*scalHeightDrop
     scalTimeTotal = 2*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq); % time to drop + 1/2  period
     scalFreqCollision = 1/scalTimeTotal;
     scalTimeStep = pi*sqrt(scalMass/scalSpringConst)*0.05; % this is 1/1000 of a period
@@ -48,7 +49,7 @@ function sim1d(scalHeightDrop, scalDamp, scalSpringConst, scalNumPart, scalDiam,
     vecMass(1) = options.scalMassBall;
     vecDamp = ones(scalNumPart,1)*scalDamp;
     vecDamp(1) = options.scalDampBall;
-    vecPosX = ((0:scalNumPart-1) * scalDiam * (1 - scalPressure))';
+    vecPosX = ((0:scalNumPart-1) * scalDiam * (1 - options.scalPressure))';
     vecPosX(1) = vecPosX(2) - scalDiam - scalHeightDrop;  % <-- ADD THIS LINE
     vecVelocityX = zeros(scalNumPart,1);
     vecAccelerationX = zeros(scalNumPart,1);
@@ -56,7 +57,7 @@ function sim1d(scalHeightDrop, scalDamp, scalSpringConst, scalNumPart, scalDiam,
     vecForceX = zeros(scalNumPart,1);
     vecTime = (0:scalTimeStep:scalTimeTotal);
     scalMaxTimeSteps = length( vecTime );
-    scalVisInterval = .0005*scalSpringConst; % plot every 50 steps
+    scalVisInterval = .05*scalSpringConst; % plot every 50 steps
 
     % depabtable if you want these - more memory for bigger sims
     if savePosVel
@@ -71,7 +72,7 @@ function sim1d(scalHeightDrop, scalDamp, scalSpringConst, scalNumPart, scalDiam,
     % produces a list of inditices of particles that are connected by a spring
     vecSour = [(1:scalNumPart-1)'; (2:scalNumPart)']; % index of particle on one end of spring
     vecDest = [(2:scalNumPart)'; (1:scalNumPart-1)']; % index of particle on other end of spring
-    vecDistRest = repmat(scalDiam * (1 - scalPressure), 2*(scalNumPart-1), 1);
+    vecDistRest = repmat(scalDiam * (1 - options.scalPressure), 2*(scalNumPart-1), 1);
     vecSpringConst        = ones(2*(scalNumPart-1), 1) * scalSpringConst;
     vecSpringConst(1)     = options.scalSpringBall;  % sour=1→dest=2
     vecSpringConst(scalNumPart) = options.scalSpringBall;  % reverse: sour=2→dest=1
