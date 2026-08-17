@@ -1,15 +1,12 @@
-function sim1d(scalHeightDrop, scalDamp, scalSpringConst, scalNumPart, scalDiam, scalMass, options)
+function sim1d(scalHeightDrop, scalDampHat, scalNumPart, options)
 
     arguments
         scalHeightDrop (1,1) double
-        scalDamp (1,1) double
-        scalSpringConst (1,1) double
+        scalDampHat (1,1) double
         scalNumPart (1,1) double
-        scalDiam (1,1) double
-        scalMass (1,1) double
-        options.scalDampBall    (1,1) double = scalDamp        % defaults to chain value
-        options.scalMassBall    (1,1) double = scalMass
-        options.scalSpringBall  (1,1) double = scalSpringConst % spring between ball and chain
+        options.scalDampHatBall    (1,1) double = 0        % defaults to chain value
+        options.scalMassBall    (1,1) double = 1
+        options.scalSpringBall  (1,1) double = 1 % spring between ball and chain
         options.visSim (1,1) logical = false
         options.scalPressure (1,1) double = 0.0
         options.scalGravityScale (1,1) double = 0.0001 % should be smaller than compression from impact
@@ -35,7 +32,12 @@ function sim1d(scalHeightDrop, scalDamp, scalSpringConst, scalNumPart, scalDiam,
     end
 
 %% physical constant calculations
+    scalDiam = 1;
+    scalMass = 1;
+    scalSpringConst = 1;
     scalNatFreq = sqrt(scalSpringConst/scalMass);
+    scalDamp = 2 * scalDampHat * sqrt(scalSpringConst * scalMass);
+    scalDampBall = 2 * options.scalDampHatBall * sqrt(options.scalSpringBall * options.scalMassBall);
     scalGravity = options.scalGravityScale*scalNatFreq^2*2*scalHeightDrop
     scalTimeTotal = 2*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq); % time to drop + 1/2  period
     scalFreqCollision = 1/scalTimeTotal;
@@ -47,8 +49,8 @@ function sim1d(scalHeightDrop, scalDamp, scalSpringConst, scalNumPart, scalDiam,
 %% pre allocations
     vecMass = ones(scalNumPart,1)*scalMass;
     vecMass(1) = options.scalMassBall;
-    vecDamp = ones(scalNumPart,1)*scalDamp;
-    vecDamp(1) = options.scalDampBall;
+    vecDamp = ones(scalNumPart,1) * scalDamp;
+    vecDamp(1) = scalDampBall;
     vecPosX = ((0:scalNumPart-1) * scalDiam * (1 - options.scalPressure))';
     vecPosX(1) = vecPosX(2) - scalDiam - scalHeightDrop;  % <-- ADD THIS LINE
     vecVelocityX = zeros(scalNumPart,1);
@@ -57,7 +59,7 @@ function sim1d(scalHeightDrop, scalDamp, scalSpringConst, scalNumPart, scalDiam,
     vecForceX = zeros(scalNumPart,1);
     vecTime = (0:scalTimeStep:scalTimeTotal);
     scalMaxTimeSteps = length( vecTime );
-    scalVisInterval = .05*scalSpringConst; % plot every 50 steps
+    scalVisInterval = 25; % 
 
     % depabtable if you want these - more memory for bigger sims
     if savePosVel
@@ -129,7 +131,7 @@ function sim1d(scalHeightDrop, scalDamp, scalSpringConst, scalNumPart, scalDiam,
         if savePosVel
             matPosX(:, step) = gather(vecPosX); % gather() pulls from GPU to CPU
             matVelX(:, step) = gather(vecVelocityX);
-            matAccelX(:, step) = gather(vecVelocityX);
+            matAccelX(:, step) = gather(vecAccelerationX);
         end
 
         if options.visSim && mod(step, scalVisInterval) == 0
