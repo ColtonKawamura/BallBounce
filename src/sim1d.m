@@ -6,12 +6,11 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
         scalNumPart (1,1) double
         options.scalDampHatBall    (1,1) double = 0        % defaults to chain value
         options.scalMassBall    (1,1) double = 1
-        options.scalSpringBall  (1,1) double = 1 % spring between ball and chain
+        options.scalSpringBall  (1,1) double = 1 % ball spring constant
         options.visSim (1,1) logical = false
         options.scalPressure (1,1) double = 0.0
         options.scalGravityScale (1,1) double = 0.0001 % should be smaller than compression from impact
     end
-
 
     %% GPU setup
     useGPU = canUseGPU();
@@ -23,7 +22,6 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     end
 
     savePosVel = true;
-    scalLogInterval = 100;
 
 %%% temp initial parameters
     if options.visSim
@@ -38,13 +36,13 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     scalNatFreq = sqrt(scalSpringConst/scalMass);
     scalDamp = 2 * scalDampHat * sqrt(scalSpringConst * scalMass);
     scalDampBall = 2 * options.scalDampHatBall * sqrt(options.scalSpringBall * options.scalMassBall);
-    scalGravity = options.scalGravityScale*scalNatFreq^2*2*scalHeightDrop
+    scalGravity = options.scalGravityScale*scalNatFreq^2*2*scalHeightDrop;
     scalTimeTotal = 2*(2*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq)); % time to drop + 1/2  period
-    scalFreqCollision = 1/scalTimeTotal;
-    scalTimeStep = pi*sqrt(scalMass/scalSpringConst)*0.05; % this is 1/1000 of a period
+    % scalFreqCollision = 1/scalTimeTotal;
+    scalTimeStep = pi*sqrt(scalMass/scalSpringConst)*0.005; % this is 1/1000 of a period
     scalTimeStepHalf = .5 * scalTimeStep;
     scalTimeStepHalfSquared = .5 * scalTimeStep^2;
-
+    scalLogInterval = scalTimeStep/10;
 
 %% pre allocations
     vecMass = ones(scalNumPart,1)*scalMass;
@@ -52,14 +50,14 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     vecDamp = ones(scalNumPart,1) * scalDamp;
     vecDamp(1) = scalDampBall;
     vecPosX = ((0:scalNumPart-1) * scalDiam * (1 - options.scalPressure))';
-    vecPosX(1) = vecPosX(2) - scalDiam - scalHeightDrop;  % <-- ADD THIS LINE
+    vecPosX(1) = vecPosX(2) - scalDiam - scalHeightDrop;
     vecVelocityX = zeros(scalNumPart,1);
-    vecAccelerationX = zeros(scalNumPart,1);
+    % vecAccelerationX = zeros(scalNumPart,1);
     vecAccelerationX_old = zeros(scalNumPart,1);
-    vecForceX = zeros(scalNumPart,1);
+    % vecForceX = zeros(scalNumPart,1);
     vecTime = (0:scalTimeStep:scalTimeTotal);
     scalMaxTimeSteps = length( vecTime );
-    scalVisInterval = 25; % 
+    scalVisInterval = 100; % 
 
     % depabtable if you want these - more memory for bigger sims
     if savePosVel
@@ -117,6 +115,7 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
         vecForceX = vecForceX + vecDampForce;
 
         %% gravity pull all particles
+        %% grvaity is much weaker that the compressoin force
         vecForceX = vecForceX + vecMass * scalGravity;
 
         %% fix endpoints
@@ -158,15 +157,17 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     end
 
 %% plot
-    figure;
-    plot(vecTime, matVelX(1,:));
-    xlabel('time', 'Interpreter', 'LaTeX', 'FontSize', 20);
-    ylabel('$v_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
+    if options.visSim
+        figure;
+        plot(vecTime, matVelX(1,:));
+        xlabel('time', 'Interpreter', 'LaTeX', 'FontSize', 20);
+        ylabel('$v_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
 
-    figure;
-    plot(vecTime, 0.5*options.scalMassBall*matVelX(1,:).^2);
-    xlabel('time', 'Interpreter', 'LaTeX', 'FontSize', 20);
-    ylabel('$K_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
+        figure;
+        plot(vecTime, 0.5*options.scalMassBall*matVelX(1,:).^2);
+        xlabel('time', 'Interpreter', 'LaTeX', 'FontSize', 20);
+        ylabel('$K_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
+    end
 
     %% analysis
     ballVel = matVelX(1,:);
@@ -180,19 +181,95 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     idxFirstContact = find(inContact, 1, 'first');
 
     % find first index (AFTER FIRST CONTACT) when ball is no longer in contact
-    idxFirstSeparation = idxFirstContact + find(~inContact(idxFirstContact:end, 1, 'first'));
+    % need to add idxFirstContact so it's relative to the original index list
+    idxFirstSeparation = idxFirstContact + find(~inContact(idxFirstContact:end), 1, 'first');
 
     scalV_before = max(abs(ballVel(1:idxFirstContact))); % finds max from start to first contact
-    scalV_after = max(abs(ballVel(idxFirstContact:idxFirstSeparation))); % finds max from first contact to separation
 
-    scalRatioKE  = (scalV_after / scalV_before)^2;  % e^2 for consistency
+    % find the first index of first separation after initial contact
+    idxSepRelative = find(~inContact(idxFirstContact:end), 1, 'first');
 
-    fprintf('[analysis] v_before: %.4f\n', scalV_before);
+    % combine two indicies to get the index of first separation relative to the original index list
+    idxFirstSeparation = idxFirstContact + idxSepRelative;
+
+    % flip with index of first sepration
+    notContact = ~inContact(idxFirstContact:end);
+
+    % avoid false positives by finding wher 3 consecutive time steps are false
+    consecFalse = find(conv(double(notContact), ones(1,3), 'valid') == 3, 1, 'first');
+
+    if isempty(consecFalse)
+        warning('[sim1d] No clean separation found — using idxFirstSeparation.');
+        idxTrueSeparation = idxFirstSeparation;
+    else
+        idxTrueSeparation = idxFirstContact + consecFalse - 1;
+    end
+
+    scalV_after = max(abs(ballVel(idxTrueSeparation:end)));
+
+    if scalV_before < 0.2 || scalV_before > 0.25
+        warning('[sim1d] V_before:  %.4f\n', scalV_before);
+    else
+       fprintf('[analysis] v_before: %.4f\n', scalV_before);
+    end
     fprintf('[analysis] v_after:  %.4f\n', scalV_after);
-    fprintf('[analysis] e^2:        %.4f\n', scalV_after/scalV_before);
 
+    scalRatioKE  = (scalV_after / scalV_before).^2;  % e^2 for consistency
+
+    % wave travel time:
+
+    % scalTauContactTheory = pi / sqrt(options.scalSpringBall / scalMass); % this is what the paper uses
+    scalTauContactTheory = pi / sqrt(options.scalSpringBall / options.scalMassBall);
     scalTauContact = vecTime(idxFirstSeparation) - vecTime(idxFirstContact);
-    scalLambda = 2*(scalNumPart-1)*scalDiam / (scalNatFreq*scalDiam*scalTauContact);
+    scalLambdaTheory = 2*(scalNumPart-1)*scalDiam / (scalNatFreq*scalDiam*scalTauContactTheory);
+
+    % to get scalLambda computationally, need to measure wavespeed directly
+    % --- LEG 1: time to hit back wall ---
+    % find first time gap between particle (N-1) and N < scalDiam
+    vecGapLast = matPosX(scalNumPart,:) - matPosX(scalNumPart-1,:); % gap between last two particles
+
+    % find() gives subarray, so need to add idxFirstContact to make relative to original
+    % REPLACE the idxWaveArrival block with:
+    velSecondToLast = matVelX(scalNumPart-1, :);
+    velBackground = mean(abs(velSecondToLast(1:idxFirstContact-1)));
+    idxWaveArrival = idxFirstContact + ...
+    find(abs(velSecondToLast(idxFirstContact+1:end)) > velBackground + 1e-4, 1, 'first');
+
+
+    % time it takes for  wave to first hit the "bottom"
+    scalLeg1 = vecTime(idxWaveArrival) - vecTime(idxFirstContact);
+
+    % --- LEG 2: reflection: time for particle (N-1) to return to zero velocity ---
+    % find first time vel(N-1) crosses zero AFTER wave arrival
+    velSecondToLast = matVelX(scalNumPart-1, :);
+    idxReturnZero = idxWaveArrival + find(velSecondToLast(idxWaveArrival:end) >= 0, 1, 'first') - 1;
+    scalLeg2 = vecTime(idxReturnZero) - vecTime(idxWaveArrival);
+
+    scalRoundTrip= 2 * (scalLeg1 +scalLeg2);  % assuming symmetric return
+    scalWaveSpeed = (scalNumPart-1)*scalDiam / (scalLeg1);
+
+    % scalLambda = scalLambdaTheory;
+    scalLambda = scalRoundTrip / scalTauContact;
+
+
+
+%% Debugging
+    fprintf('[analysis] e:        %.4f\n', sqrt(scalV_after/scalV_before));
+    % fprintf('[analysis] idxFirstContact:    %d  (t=%.3f)\n',...
+    %     idxFirstContact,...
+    %     vecTime(idxFirstContact));
+    % fprintf('[analysis] idxFirstSeparation: %d  (t=%.3f)\n',...
+    %     idxFirstSeparation,...
+    %     vecTime(idxFirstSeparation));
+    fprintf('[analysis] tau_contact: %.4f\n', scalTauContact);
+    fprintf('[analysis] tau_expected: %.4f\n', pi/sqrt(options.scalSpringBall/options.scalMassBall));
+    fprintf('[analysis] c_theory: %.4f\n', scalNatFreq * scalDiam);
+    fprintf('[analysis] c_measured: %.4f\n', scalWaveSpeed);
+    % fprintf('[analysis] Lambda_corrected: %.4f\n',...
+        % 2*(scalNumPart-1)*scalDiam / (5.8233 * scalTauContact));
+    fprintf('[analysis] Lambda_theory: %.4f\n', scalLambdaTheory);
+    fprintf('[analysis] Lambda_measured: %.4f\n', scalLambda);
+
 
     function vecForce = forceLaw(vecPosX, vecSour, vecDest, vecDistRest, vecSpringConst)
         vecContDist = vecPosX(vecDest) - vecPosX(vecSour);
