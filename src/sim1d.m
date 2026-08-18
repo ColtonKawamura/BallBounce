@@ -37,7 +37,7 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     scalDamp = 2 * scalDampHat * sqrt(scalSpringConst * scalMass);
     scalDampBall = 2 * options.scalDampHatBall * sqrt(options.scalSpringBall * options.scalMassBall);
     scalGravity = options.scalGravityScale*scalNatFreq^2*2*scalHeightDrop;
-    scalTimeTotal = 2*(2*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq)); % time to drop + 1/2  period
+    scalTimeTotal = (2*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq)); % time to drop + 1/2  period
     % scalFreqCollision = 1/scalTimeTotal;
     scalTimeStep = pi*sqrt(scalMass/scalSpringConst)*0.005; % this is 1/1000 of a period
     scalTimeStepHalf = .5 * scalTimeStep;
@@ -121,7 +121,7 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
 
         %% gravity pull all particles
         %% grvaity is much weaker that the compressoin force
-        vecForceX = vecForceX + vecMass * scalGravity;
+        vecForceX(1) = vecForceX(1) + vecMass(1) * scalGravity;
 
         %% fix endpoints
         vecForceX(scalNumPart) = 0;% the bottom (right) particle is fixed

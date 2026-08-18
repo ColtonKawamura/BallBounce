@@ -7,7 +7,7 @@ scalDampHat    = 0.01;
 scalH = 0.22 / (2 * sqrt(.0001));  % = 11
 scalH = 5;  % = 11
 scalMassBall    = 5;
-scalSpringBall = .2;                          % stiff — no tunneling
+scalSpringBall = .4;                          % stiff — no tunneling
 
 ratios  = nan(size(NArr));
 lambdas = nan(size(NArr));
@@ -30,9 +30,9 @@ for i = 1:length(NArr)
     fprintf('N=%d  Lambda=%.3f  e=%.4f\n', NArr(i), lambdas(i), sqrt(ratios(i)));
 end
 
-e       = sqrt(max(ratios, 0));
-e_inf   = mean(e(end-5:end), 'omitnan');
-e_max   = max(e, [], 'omitnan');
+e = sqrt(max(ratios, 0)); % i'm  outputing KE
+e_inf = mean(e(end-5:end), 'omitnan'); % average the last 5 values
+e_max = max(e, [], 'omitnan');
 e_tilde = (e - e_inf) ./ (e_max - e_inf);
 
 figure;
@@ -51,4 +51,4 @@ xlabel('$N$', Interpreter='latex', FontSize=20);
 ylabel('$\tilde{e}$', Interpreter='latex', FontSize=20);
 grid on;
 
-sim1d(scalH,scalDampHat, 8, scalSpringBall=scalSpringBall, scalMassBall = scalMassBall, visSim=true);
+sim1d(scalH,scalDampHat, 40, scalSpringBall=scalSpringBall, scalMassBall = scalMassBall, visSim=true);
