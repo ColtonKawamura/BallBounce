@@ -1,12 +1,13 @@
 % All defaults addpath("~/repos/BallBounce/src/");
 
 % NArr           = 2:1:40;
-Narr = 2:50;
+NArr = 2:50;
 scalDampHat    = 0.01;
 % scalH          = 6;
 scalH = 0.22 / (2 * sqrt(.0001));  % = 11
-scalMassBall    = 2.7;
-scalSpringBall = .15;                          % stiff — no tunneling
+scalH = 5;  % = 11
+scalMassBall    = 5;
+scalSpringBall = .2;                          % stiff — no tunneling
 
 ratios  = nan(size(NArr));
 lambdas = nan(size(NArr));
@@ -42,11 +43,12 @@ xlabel('$\Lambda = 2Nd/c\tau$', Interpreter='latex', FontSize=20);
 ylabel('$\tilde{e}$', Interpreter='latex', FontSize=20);
 grid on;
 
-
 figure;
-semilogx(lambdas, sqrt(max(ratios,0)), 'o', LineWidth=2);
-xlabel('$\Lambda = 2Nd/c\tau$', Interpreter='latex', FontSize=20);
-ylabel('$e$', Interpreter='latex', FontSize=20);
+semilogx(NArr, e_tilde, 'o', LineWidth=2);
+yline(1, '--r');
+xline(1, '--k');
+xlabel('$N$', Interpreter='latex', FontSize=20);
+ylabel('$\tilde{e}$', Interpreter='latex', FontSize=20);
 grid on;
 
- sim1d(scalH,scalDampHat, 15, scalSpringBall=scalSpringBall, scalMassBall = scalMassBall, visSim=true);
+sim1d(scalH,scalDampHat, 8, scalSpringBall=scalSpringBall, scalMassBall = scalMassBall, visSim=true);

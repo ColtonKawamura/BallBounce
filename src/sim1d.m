@@ -4,7 +4,7 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
         scalHeightDrop (1,1) double
         scalDampHat (1,1) double
         scalNumPart (1,1) double
-        options.scalDampHatBall    (1,1) double = 0        % defaults to chain value
+        options.scalDampHatBall    (1,1) double = scalDampHat       % defaults to chain valu
         options.scalMassBall    (1,1) double = 1
         options.scalSpringBall  (1,1) double = 1 % ball spring constant
         options.visSim (1,1) logical = false
@@ -31,8 +31,8 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
 
 %% physical constant calculations
     scalDiam = 1;
-    scalMass = 1;
-    scalSpringConst = 1;
+    scalMass = 2;
+    scalSpringConst = 5;
     scalNatFreq = sqrt(scalSpringConst/scalMass);
     scalDamp = 2 * scalDampHat * sqrt(scalSpringConst * scalMass);
     scalDampBall = 2 * options.scalDampHatBall * sqrt(options.scalSpringBall * options.scalMassBall);
@@ -48,7 +48,8 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     vecMass = ones(scalNumPart,1)*scalMass;
     vecMass(1) = options.scalMassBall;
     vecDamp = ones(scalNumPart,1) * scalDamp;
-    vecDamp(1) = scalDampBall;
+    % vecDamp(1) = scalDampBall;
+    vecDamp(1) = 0;
     vecPosX = ((0:scalNumPart-1) * scalDiam * (1 - options.scalPressure))';
     vecPosX(1) = vecPosX(2) - scalDiam - scalHeightDrop;
     vecVelocityX = zeros(scalNumPart,1);
@@ -111,7 +112,11 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
         vecForceX = accumarray(vecSour, vecForceEdge, [scalNumPart, 1]); 
 
         %% damping force
+        % vecDampForce = -vecDamp .* vecVelocityX;
+        % vecForceX = vecForceX + vecDampForce;
         vecDampForce = -vecDamp .* vecVelocityX;
+        inContactNow = (vecPosX(2) - vecPosX(1)) < scalDiam;
+        vecDampForce(1) = -scalDampBall * vecVelocityX(1) * inContactNow;
         vecForceX = vecForceX + vecDampForce;
 
         %% gravity pull all particles
@@ -164,7 +169,13 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
         ylabel('$v_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
 
         figure;
-        plot(vecTime, 0.5*options.scalMassBall*matVelX(1,:).^2);
+        vecKEplot = 0.5*options.scalMassBall*matVelX(1,:).^2;
+        [peakValsPlot, peakIdxPlot] = findpeaks(vecKEplot);
+        peakValsPlot = sort(peakValsPlot, 'descend');
+        plot(vecTime, vecKEplot); hold on;
+        plot(vecTime(peakIdxPlot(1)), peakValsPlot(1), 'rv', 'MarkerFaceColor','r', 'MarkerSize', 10);
+        plot(vecTime(peakIdxPlot(2)), peakValsPlot(2), 'gv', 'MarkerFaceColor','g', 'MarkerSize', 10);
+        legend('KE', '$K_{\mathrm{before}}$', '$K_{\mathrm{after}}$', 'Interpreter','LaTeX');
         xlabel('time', 'Interpreter', 'LaTeX', 'FontSize', 20);
         ylabel('$K_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
     end
@@ -214,7 +225,19 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     end
     fprintf('[analysis] v_after:  %.4f\n', scalV_after);
 
-    scalRatioKE  = (scalV_after / scalV_before).^2;  % e^2 for consistency
+    vecKE = 0.5 * options.scalMassBall * ballVel.^2;
+
+    [peakVals, ~] = findpeaks(vecKE);
+    peakVals = sort(peakVals, 'descend');
+
+    scalKE_before = peakVals(1);
+    scalKE_after  = peakVals(2);
+
+    scalRatioKE = scalKE_after / scalKE_before;
+    scalV_before = sqrt(2*scalKE_before / options.scalMassBall);
+    scalV_after  = sqrt(2*scalKE_after  / options.scalMassBall);
+
+    % scalRatioKE  = (scalV_after / scalV_before).^2;  % e^2 for consistency
 
     % wave travel time:
 
@@ -248,13 +271,13 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     scalRoundTrip= 2 * (scalLeg1 +scalLeg2);  % assuming symmetric return
     scalWaveSpeed = (scalNumPart-1)*scalDiam / (scalLeg1);
 
-    % scalLambda = scalLambdaTheory;
-    scalLambda = scalRoundTrip / scalTauContact;
+    scalLambda = scalLambdaTheory;
+    % scalLambda = scalRoundTrip / scalTauContact;
 
 
 
 %% Debugging
-    fprintf('[analysis] e:        %.4f\n', sqrt(scalV_after/scalV_before));
+    fprintf('[analysis] e:        %.4f\n', scalV_after/scalV_before);
     % fprintf('[analysis] idxFirstContact:    %d  (t=%.3f)\n',...
     %     idxFirstContact,...
     %     vecTime(idxFirstContact));
