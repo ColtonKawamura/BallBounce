@@ -1,4 +1,4 @@
-function sim1d(scalHeightDrop, scalDampHat, scalNumPart, options)
+function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumPart, options)
 
     arguments
         scalHeightDrop (1,1) double
@@ -39,7 +39,7 @@ function sim1d(scalHeightDrop, scalDampHat, scalNumPart, options)
     scalDamp = 2 * scalDampHat * sqrt(scalSpringConst * scalMass);
     scalDampBall = 2 * options.scalDampHatBall * sqrt(options.scalSpringBall * options.scalMassBall);
     scalGravity = options.scalGravityScale*scalNatFreq^2*2*scalHeightDrop
-    scalTimeTotal = 2*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq); % time to drop + 1/2  period
+    scalTimeTotal = 2*(2*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq)); % time to drop + 1/2  period
     scalFreqCollision = 1/scalTimeTotal;
     scalTimeStep = pi*sqrt(scalMass/scalSpringConst)*0.05; % this is 1/1000 of a period
     scalTimeStepHalf = .5 * scalTimeStep;
@@ -169,26 +169,30 @@ function sim1d(scalHeightDrop, scalDampHat, scalNumPart, options)
     ylabel('$K_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
 
     %% analysis
-    [KEpeaks, KEpeakIdx] = findpeaks(0.5*options.scalMassBall*matVelX(1,:).^2, ...
-        'SortStr', 'descend', 'NPeaks', 2);
+    ballVel = matVelX(1,:);
 
-    % sort by time order (not amplitude)
-    [KEpeakIdx, sortIdx] = sort(KEpeakIdx);
-    KEpeaks = KEpeaks(sortIdx);
+    % find moment ball separates from chain: last time step where ball overlaps particle 2
+    ballPos  = matPosX(1,:);
+    chainPos = matPosX(2,:);
+    inContact = (chainPos - ballPos) < scalDiam; % 1 when touching, 0 when not in contact
 
-    scalKE_before = KEpeaks(1);
-    scalKE_after  = KEpeaks(2);
-    scalRatioKE   = scalKE_after / scalKE_before;
+    % find first contact with the chain
+    idxFirstContact = find(inContact, 1, 'first');
 
-    % wave speed: round trip through (N-1) gaps
-    scalDeltaT    = vecTime(KEpeakIdx(2)) - vecTime(KEpeakIdx(1));
-    scalWaveSpeed = 2 * (scalNumPart - 1) * scalDiam / scalDeltaT;
+    % find first index (AFTER FIRST CONTACT) when ball is no longer in contact
+    idxFirstSeparation = idxFirstContact + find(~inContact(idxFirstContact:end, 1, 'first'));
 
-    fprintf('[analysis] KE before: %.4f\n', scalKE_before);
-    fprintf('[analysis] KE after:  %.4f\n', scalKE_after);
-    fprintf('[analysis] KE ratio:  %.4f\n', scalRatioKE);
-    fprintf('[analysis] Delta t:   %.4f\n', scalDeltaT);
-    fprintf('[analysis] Wave speed: %.4f\n', scalWaveSpeed);
+    scalV_before = max(abs(ballVel(1:idxFirstContact))); % finds max from start to first contact
+    scalV_after = max(abs(ballVel(idxFirstContact:idxFirstSeparation))); % finds max from first contact to separation
+
+    scalRatioKE  = (scalV_after / scalV_before)^2;  % e^2 for consistency
+
+    fprintf('[analysis] v_before: %.4f\n', scalV_before);
+    fprintf('[analysis] v_after:  %.4f\n', scalV_after);
+    fprintf('[analysis] e^2:        %.4f\n', scalV_after/scalV_before);
+
+    scalTauContact = vecTime(idxFirstSeparation) - vecTime(idxFirstContact);
+    scalLambda = 2*(scalNumPart-1)*scalDiam / (scalNatFreq*scalDiam*scalTauContact);
 
     function vecForce = forceLaw(vecPosX, vecSour, vecDest, vecDistRest, vecSpringConst)
         vecContDist = vecPosX(vecDest) - vecPosX(vecSour);
