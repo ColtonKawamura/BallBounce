@@ -1,6 +1,6 @@
 % All defaults addpath("~/repos/BallBounce/src/");
-NArr = 2:20;
-scalDampHat    = 0;
+NArr = 2:15;
+scalDampHat    = 0.005;
 % scalH = 0.22 / (2 * sqrt(.0001));  % = 11
 scalH = 5;  % = 11
 scalMassBall= 12;
@@ -22,18 +22,19 @@ for i = 1:length(NArr)
 end
 
 e = sqrt(max(ratios, 0)); % i'm  outputing KE
-e_inf = mean(e(end-5:end), 'omitnan'); % average the last 5 values
+% e_inf = mean(e(end-5:end), 'omitnan'); % average the last 5 values
+e_inf = 0; % average the last 5 values
 e_max = max(e, [], 'omitnan');
 e_tilde = (e - e_inf) ./ (e_max - e_inf);
 
 figure;
-semilogx(lambdas_theory, e_tilde, 'o', LineWidth=2);
+semilogx(lambdas_theory, e_tilde, 'o-', 'LineWidth', 2, 'DisplayName', 'Theory');
 hold on;
-semilogx(lambdas_measured, e_tilde, 'o', LineWidth=2);
-yline(1, '--r');
-xline(1, '--k');
+semilogx(lambdas_measured, e_tilde, 'o-', 'LineWidth', 2, 'DisplayName', 'Measured');
 xlabel('$\Lambda = 2Nd/c\tau$', Interpreter='latex', FontSize=20);
 ylabel('$\tilde{e}$', Interpreter='latex', FontSize=20);
+legend('show', 'Location', 'NorthEastOutside', 'Interpreter', 'latex', FontSize=15);
+title(sprintf('$\\hat{\\gamma} = %.3f$', scalDampHat), 'Interpreter', 'latex', 'FontSize', 20);
 grid on;
 
 figure;
