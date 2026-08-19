@@ -1,11 +1,11 @@
-function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeightDrop, scalDampHat, scalNumPart, scalSpringRatio, options)
+function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeightDrop, scalDampHat, scalNumPart, scalMassRatio, scalSpringRatio, options)
 
     arguments
         scalHeightDrop (1,1) double
         scalDampHat (1,1) double
         scalNumPart (1,1) double
+        scalMassRatio    (1,1) double 
         scalSpringRatio    (1,1) double
-        options.scalMassBall    (1,1) double = 1
         options.scalDampHatBall    (1,1) double = scalDampHat       % defaults to chain valu
         options.visSim (1,1) logical = false
         options.scalPressure (1,1) double = 0.0
@@ -32,11 +32,12 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
 %% physical constant calculations
     scalDiam = 1;
     scalMass = 2;
+    scalMassBall = scalMassRatio * scalMass;
     scalSpringConst = 5;
     scalSpringBall = scalSpringRatio * scalSpringConst;
     scalNatFreq = sqrt(scalSpringConst/scalMass);
     scalDamp = 2 * scalDampHat * sqrt(scalSpringConst * scalMass);
-    scalDampBall = 2 * options.scalDampHatBall * sqrt(scalSpringBall * options.scalMassBall);
+    scalDampBall = 2 * options.scalDampHatBall * sqrt(scalSpringBall * scalMassBall);
     scalGravity = options.scalGravityScale*scalNatFreq^2*2*scalHeightDrop;
     scalTimeTotal = (2*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq)); % time to drop + 1/2  period
     % scalFreqCollision = 1/scalTimeTotal;
@@ -47,7 +48,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
 
 %% pre allocations
     vecMass = ones(scalNumPart,1)*scalMass;
-    vecMass(1) = options.scalMassBall;
+    vecMass(1) = scalMassBall;
     vecDamp = ones(scalNumPart,1) * scalDamp;
     vecDamp(1) = scalDampBall;
     % vecDamp(1) = 0;
@@ -169,7 +170,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
 
 %% Find Peaks of KE for restitution
     vecBallVel = matVelX(1,:);
-    vecKE = 0.5 * options.scalMassBall * vecBallVel.^2;
+    vecKE = 0.5 * scalMassBall * vecBallVel.^2;
 
     % if the second peak is not found, set it to 0
     % use first two peaks in chronological order  in case they are about equal
@@ -184,8 +185,8 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     fprintf('[analysis] KE_after: %.4f\n', scalKE_after);
 
     scalRatioKE = scalKE_after / scalKE_before;
-    scalV_before = sqrt(2*scalKE_before / options.scalMassBall);
-    scalV_after  = sqrt(2*scalKE_after  / options.scalMassBall);
+    scalV_before = sqrt(2*scalKE_before / scalMassBall);
+    scalV_after  = sqrt(2*scalKE_after  / scalMassBall);
     fprintf('[analysis] e: %.4f\n', scalV_after/scalV_before);
 
 
@@ -207,8 +208,8 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     fprintf('[analysis] tau_contact: %.4f\n', scalTauContact);
 
     % "τ is half the total contact time for a symmetric impact"
-    scalTauContactTheory = .5 * pi / sqrt(scalSpringBall / options.scalMassBall);
-    fprintf('[analysis] tau_thoery: %.4f\n', pi/sqrt(scalSpringBall/options.scalMassBall));
+    scalTauContactTheory = .5 * pi / sqrt(scalSpringBall / scalMassBall);
+    fprintf('[analysis] tau_thoery: %.4f\n', pi/sqrt(scalSpringBall/scalMassBall));
 
 %% measured wavespeed
 
