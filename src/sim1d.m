@@ -1,4 +1,4 @@
-function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumPart, options)
+function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeightDrop, scalDampHat, scalNumPart, options)
 
     arguments
         scalHeightDrop (1,1) double
@@ -37,7 +37,7 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     scalDamp = 2 * scalDampHat * sqrt(scalSpringConst * scalMass);
     scalDampBall = 2 * options.scalDampHatBall * sqrt(options.scalSpringBall * options.scalMassBall);
     scalGravity = options.scalGravityScale*scalNatFreq^2*2*scalHeightDrop;
-    scalTimeTotal = .8*(2*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq)); % time to drop + 1/2  period
+    scalTimeTotal = (2*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq)); % time to drop + 1/2  period
     % scalFreqCollision = 1/scalTimeTotal;
     scalTimeStep = pi*sqrt(scalMass/scalSpringConst)*0.005; % this is 1/1000 of a period
     scalTimeStepHalf = .5 * scalTimeStep;
@@ -173,56 +173,62 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     % if the second peak is not found, set it to 0
     try 
         [vecPeakVals, vecPeakIdx] = findpeaks(vecKE);
-        [vecPeakVals, vecSortOrder] = sort(vecPeakVals, 'descend');
-        vecPeakIdx = vecPeakIdx(vecSortOrder);
+        % use first two peaks in chronological order
         scalKE_before = vecPeakVals(1);
         scalKE_after  = vecPeakVals(2);
     catch ME
         scalKE_after  = 0;
     end
-    fprintf('[analysis] KE_before:        %.4f\n', scalKE_before);
-    fprintf('[analysis] KE_after:        %.4f\n', scalKE_after);
+    fprintf('[analysis] KE_before: %.4f\n', scalKE_before);
+    fprintf('[analysis] KE_after: %.4f\n', scalKE_after);
 
     scalRatioKE = scalKE_after / scalKE_before;
     scalV_before = sqrt(2*scalKE_before / options.scalMassBall);
     scalV_after  = sqrt(2*scalKE_after  / options.scalMassBall);
-    fprintf('[analysis] e:        %.4f\n', scalV_after/scalV_before);
+    fprintf('[analysis] e: %.4f\n', scalV_after/scalV_before);
 
 
+%% Meaured Contact Time
 
-
-
-%% Lambda From Computation
-
-    % find moment ball separates from chain: last time step where ball overlaps particle 2
+    % find moment bal gets in contact with chain
     vecBallPosX  = matPosX(1,:);
     vecChainLeadPosX = matPosX(2,:);
     inContact = (vecChainLeadPosX - vecBallPosX) < scalDiam; % 1 when touching, 0 when not in contact
     idxFirstContact = find(inContact, 1, 'first');
 
-%% Find when velocity goes to zero after first KE peak
+    % Find when velocity goes to zero after first KE peak
     vecBallVelWindow = vecBallVel(vecPeakIdx(1):end);
     scalIdxCrossZero = find(diff(sign(vecBallVelWindow)) ~= 0, 1, 'first');
-    idxVelZero = vecPeakIdx(1) + scalIdxCrossZero;
+    idxVelZero = vecPeakIdx(1) + scalIdxCrossZero + 1;
 
     % contact time = first contact to velocity zero crossing
     scalTauContact = vecTime(idxVelZero) - vecTime(idxFirstContact);
     fprintf('[analysis] tau_contact: %.4f\n', scalTauContact);
 
-    % find() gives subarray, so need to add idxFirstContact to make relative to original
-    % REPLACE the idxWaveArrival block with:
+%% measured wavespeed
+
+    % velocity of second-to-last particle (first to feel the reflected wall)
     velSecondToLast = matVelX(scalNumPart-1, :);
+
+    % baseline velocity before any wave arrives (should be ~0, nonzero if gravity on chain)
     velBackground = mean(abs(velSecondToLast(1:idxFirstContact-1)));
+
+    % wave arrival: first time vel(N-1) exceeds background AFTER first contact
+    % find() returns index relative to the subarray starting at idxFirstContact+1
+    % so add idxFirstContact to convert back to global time index
     idxWaveArrival = idxFirstContact + ...
-    find(abs(velSecondToLast(idxFirstContact+1:end)) > velBackground + 1e-4, 1, 'first');
+        find(abs(velSecondToLast(idxFirstContact+1:end)) > velBackground + 1e-4, 1, 'first');
 
-
-    % time it takes for  wave to first hit the "bottom"
+    % LEG 1: time for wave to travel from particle 1 to particle N-1
+    % distance = (N-1) * d, time = idxWaveArrival - idxFirstContact
     scalLeg1 = vecTime(idxWaveArrival) - vecTime(idxFirstContact);
 
-    % scalRoundTrip= 2 * (scalLeg1 +scalLeg2);  % assuming symmetric return
-    scalWaveSpeed = (scalNumPart-1)*scalDiam / (scalLeg1);
-    fprintf('[analysis] c_measured: %.4f\n', scalWaveSpeed);
+    % wave speed = distance / time
+    scalWaveSpeed_Measured = (scalNumPart-1)*scalDiam / scalLeg1;
+    fprintf('[analysis] c_measured: %.4f\n', scalWaveSpeed_Measured);
+
+    scalWaveSpeed_Theory = sqrt(scalSpringConst / scalMass) * scalDiam;
+    fprintf('[analysis] c_theory: %.4f\n', scalWaveSpeed_Theory);
 
 %% Lambda From Theory
     scalTauContactTheory = pi / sqrt(options.scalSpringBall / options.scalMassBall);
@@ -232,8 +238,11 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     fprintf('[analysis] Lambda_theory: %.4f\n', scalLambdaTheory);
     % scalLambda = scalRoundTrip / scalTauContact;
 
-%% pick a lambda to plot
-    scalLambda = scalLambdaTheory;
+%% Lambda from Calculation
+    scalLambda_Measured = 2*(scalNumPart-1)*scalDiam / (scalWaveSpeed_Measured.*scalTauContact);
+    fprintf('[analysis] Lambda_measured: %.4f\n', scalLambda_Measured);
+
+    % scalLambda = scalLambdaTheory;
 
 
 %% plotting

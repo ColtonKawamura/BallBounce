@@ -1,25 +1,18 @@
 % All defaults addpath("~/repos/BallBounce/src/");
-
+NArr = 2:20;
 scalDampHat    = 0;
-% scalH          = 6;
-scalH = 0.22 / (2 * sqrt(.0001));  % = 11
+% scalH = 0.22 / (2 * sqrt(.0001));  % = 11
 scalH = 5;  % = 11
 scalMassBall= 12;
 scalSpringBall = .4;                          % stiff — no tunneling
 
 ratios  = nan(size(NArr));
-lambdas = nan(size(NArr));
-
-% debug
-% [ratios(i), lambdas(i)] = sim1d(scalH,...
-%         scalDampHat,...
-%         6, ...
-%         scalSpringBall=scalSpringBall,...
-%         visSim=true);
+lambdas_theory = nan(size(NArr));
+lambdas_measured = nan(size(NArr));
 
 for i = 1:length(NArr)
     fprintf('N=%d\n', NArr(i));
-    [ratios(i), lambdas(i)] = sim1d(scalH,...
+    [ratios(i), lambdas_theory(i), lambdas_measured(i)] = sim1d(scalH,...
         scalDampHat,...
         NArr(i), ...
         scalSpringBall=scalSpringBall, ...
@@ -34,7 +27,9 @@ e_max = max(e, [], 'omitnan');
 e_tilde = (e - e_inf) ./ (e_max - e_inf);
 
 figure;
-semilogx(lambdas, e_tilde, 'o', LineWidth=2);
+semilogx(lambdas_theory, e_tilde, 'o', LineWidth=2);
+hold on;
+semilogx(lambdas_measured, e_tilde, 'o', LineWidth=2);
 yline(1, '--r');
 xline(1, '--k');
 xlabel('$\Lambda = 2Nd/c\tau$', Interpreter='latex', FontSize=20);
@@ -49,4 +44,4 @@ xlabel('$N$', Interpreter='latex', FontSize=20);
 ylabel('$\tilde{e}$', Interpreter='latex', FontSize=20);
 grid on;
 
-sim1d(scalH,scalDampHat, 30, scalSpringBall=scalSpringBall, scalMassBall = scalMassBall, visSim=true);
+sim1d(scalH,scalDampHat, 5, scalSpringBall=scalSpringBall, scalMassBall = scalMassBall, visSim=true);
