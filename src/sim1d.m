@@ -7,7 +7,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
         scalMassRatio    (1,1) double 
         scalSpringRatio    (1,1) double
         scalSpringConst   (1,1) double  = 5
-        options.scalDampHatBall    (1,1) double = scalDampHat       % defaults to chain valu
+        options.scalDampHatBall    (1,1) double = 0.00001       % defaults to chain valu
         options.visSim (1,1) logical = false
         options.scalPressure (1,1) double = 0.0
         options.scalGravityScale (1,1) double = 0.0001 % should be smaller than compression from impact

@@ -46,10 +46,10 @@ xlabel('$N$', Interpreter='latex', FontSize=20);
 ylabel('$\tilde{e}$', Interpreter='latex', FontSize=20);
 grid on;
 
-sim1d(scalH,scalDampHat, 5, scalMassRatio, scalSpringRatio , visSim=true);
+sim1d(scalH,scalDampHat, 5, scalMassRatio, scalSpringRatio ,10, visSim=true);
 
 
-% ----
+%% ---- Sweep over spring ratios
 NArr = 2:15;
 scalDampHat   = 0.0001;
 scalH         = 5;
@@ -95,7 +95,7 @@ xscale(gca, 'log');
 
 
 
-% ---
+%% --- Swee pver damping
 NArr = 2:15;
 scalH         = 5;
 scalMassRatio = 6;
@@ -103,8 +103,9 @@ scalSpringRatio = 0.1;  % fixed
 scalDampHatArr = [0.01, 0.003, 0.001, 0.0003, 0.0001];  % high=red, low=blue
 
 figure; hold on;
-t = linspace(1, 0, length(scalDampHatArr))';
-colors = [t, zeros(length(t),1), 1-t];
+t_color = scalSpringRatio / 0.15;  % 1=red, 0=blue
+lineColor = [t_color, 0, 1-t_color];
+markerSizes = linspace(15, 4, length(scalDampHatArr));  % large=high damp, small=low damp
 
 for j = 1:length(scalDampHatArr)
     scalDampHat = scalDampHatArr(j);
@@ -123,16 +124,13 @@ for j = 1:length(scalDampHatArr)
     e_max   = max(e, [], 'omitnan');
     e_tilde = (e - 0) ./ (e_max - 0);
 
-    markerSizes = linspace(15, 4, length(scalDampHatArr));  % large=high damp, small=low damp
-
-    % then inside the loop, replace the semilogx call with:
     semilogx(lambdas_theory, e_tilde, '-', ...
-        'LineWidth', 2, ...
-        'Color', colors(j,:), ...
+        'LineWidth', 1, ...
+        'Color', lineColor, ...
         'HandleVisibility', 'off');
     semilogx(lambdas_theory, e_tilde, 'o', ...
         'MarkerSize', markerSizes(j), ...
-        'Color', colors(j,:), ...
+        'Color', lineColor, ...
         'DisplayName', sprintf('$\\hat{\\gamma} = %.4f$', scalDampHat));
 end
 
@@ -142,3 +140,191 @@ legend('show', 'Location', 'best', 'Interpreter', 'latex', 'FontSize', 13);
 title(sprintf('$k_r = %.3f$', scalSpringRatio), 'Interpreter', 'latex', 'FontSize', 20);
 grid on;
 xscale(gca, 'log');
+
+
+%% --- Sweep over Chain Stiffness vs Lambda ---
+NArr = 2:40;
+scalDampHat   = 0.0001;
+scalH         = 5;
+scalMassRatio = 6;
+scalSpringRatio = 0.2;  % fixed
+scalSpringConstArr = [10, 7, 5, 3, 1, 0.5, 0.1];  % high=red (high pressure), low=blue (low pressure)
+
+figure; hold on;
+t = linspace(1, 0, length(scalSpringConstArr))';
+colors = [t, zeros(length(t),1), 1-t];
+
+for j = 1:length(scalSpringConstArr)
+    scalSpringConst = scalSpringConstArr(j);
+
+    ratios           = nan(size(NArr));
+    lambdas_theory   = nan(size(NArr));
+    lambdas_measured = nan(size(NArr));
+
+    for i = 1:length(NArr)
+        [ratios(i), lambdas_theory(i), lambdas_measured(i)] = sim1d(scalH, ...
+            scalDampHat, NArr(i), scalMassRatio, scalSpringRatio, scalSpringConst);
+    end
+
+    e = sqrt(max(ratios, 0));
+    e(ratios <= .2) = NaN;
+    e_max   = max(e, [], 'omitnan');
+    e_tilde = e ./ e_max;
+
+    semilogx(lambdas_theory, e_tilde, 'o-', ...
+        'LineWidth', 2, ...
+        'Color', colors(j,:), ...
+        'DisplayName', sprintf('$k = %.2f$', scalSpringConst));
+end
+
+xlabel('$\Lambda = 2Nd/c\tau$', 'Interpreter', 'latex', 'FontSize', 20);
+ylabel('$\tilde{e}$',           'Interpreter', 'latex', 'FontSize', 20);
+legend('show', 'Location', 'best', 'Interpreter', 'latex', 'FontSize', 13);
+title(sprintf('Pressure sweep, $\\hat{\\gamma} = %.4f$, $k_r = %.2f$', scalDampHat, scalSpringRatio), ...
+    'Interpreter', 'latex', 'FontSize', 20);
+grid on;
+xscale(gca, 'log');
+
+%% --- Sweep over Chain Stiffness vs N ---
+NArr = 2:40;
+scalDampHat   = 0.0004;
+scalH         = 5;
+scalMassRatio = 6;
+scalSpringRatio = 0.2;  % fixed
+% scalSpringConstArr = [10, 7, 5, 3, 1, 0.5, 0.1];  % high=red (high pressure), low=blue (low pressure)
+scalSpringConstArr = logspace(.6, 1.14, 10);  % high=red (high pressure), low=blue (low pressure)
+% scalSpringConstArr = logspace(.6,1.5 , 10);  % high=red (high pressure), low=blue (low pressure)
+
+figure; hold on;
+t = linspace(1, 0, length(scalSpringConstArr))';
+colors = [t, zeros(length(t),1), 1-t];
+colors = flip(colors);
+
+for j = 1:length(scalSpringConstArr)
+    scalSpringConst = scalSpringConstArr(j);
+
+    ratios           = nan(size(NArr));
+    lambdas_theory   = nan(size(NArr));
+    lambdas_measured = nan(size(NArr));
+
+    for i = 1:length(NArr)
+        [ratios(i), lambdas_theory(i), lambdas_measured(i)] = sim1d(scalH, ...
+            scalDampHat, NArr(i), scalMassRatio, scalSpringRatio, scalSpringConst);
+    end
+
+    e = sqrt(max(ratios, 0));
+    e(ratios <= .2) = NaN;
+    e_max   = max(e, [], 'omitnan');
+    e_tilde = e ./ e_max;
+
+    % semilogx(lambdas_measured, e_tilde, 'o-', ...
+    semilogx(NArr, e_tilde, 'o-', ...
+        'LineWidth', 2, ...
+        'Color', colors(j,:), ...
+        'DisplayName', sprintf('$k = %.2f$', scalSpringConst));
+end
+
+xlabel('$N$', 'Interpreter', 'latex', 'FontSize', 20);
+% xlabel('$\Lambda = 2Nd/c\tau$', 'Interpreter', 'latex', 'FontSize', 20);
+ylabel('$\tilde{e}$',           'Interpreter', 'latex', 'FontSize', 20);
+legend('show', 'Location', 'best', 'Interpreter', 'latex', 'FontSize', 13);
+title(sprintf('Pressure sweep, $\\hat{\\gamma} = %.4f$, $k_r = %.2f$', scalDampHat, scalSpringRatio), ...
+    'Interpreter', 'latex', 'FontSize', 20);
+grid on;
+xscale(gca, 'log');
+%% ----------Restitution vs SpringConst
+
+NArr_fixed = 8;  % fixed N
+scalDampHat   = 0.0001;
+scalH         = 5;
+scalMassRatio = 6;
+scalSpringRatio = 0.2;  % fixed
+scalSpringConstArr = logspace(-1, 1, 40);  % sweep from 0.1 to 10
+
+restitution = nan(size(scalSpringConstArr));
+
+for j = 1:length(scalSpringConstArr)
+    scalSpringConst = scalSpringConstArr(j);
+    [ratio, ~, ~] = sim1d(scalH, scalDampHat, NArr_fixed, scalMassRatio, scalSpringRatio, scalSpringConst);
+    e = sqrt(max(ratio, 0));
+    restitution(j) = e;
+end
+
+figure;
+loglog(scalSpringConstArr, restitution, 'o-', 'LineWidth', 2, 'Color', [0.2 0.4 0.8]);
+xlabel('$k$ (chain spring constant)', 'Interpreter', 'latex', 'FontSize', 20);
+ylabel('$e$', 'Interpreter', 'latex', 'FontSize', 20);
+title(sprintf('$N=%d$, $\\hat{\\gamma}=%.4f$, $k_r=%.2f$', NArr_fixed, scalDampHat, scalSpringRatio), ...
+    'Interpreter', 'latex', 'FontSize', 20);
+grid on;
+
+
+
+%%% double sweep
+NArr = 2:40;
+scalH         = 5;
+scalMassRatio = 6;
+scalSpringRatio = 0.2;  % fixed
+
+scalSpringConstArr = logspace(.6, 1.14, 5);   % high=red (high pressure), low=blue (low pressure)
+scalDampHatArr = logspace(-3, -1, 10);      % low=small marker, high=large marker
+
+markerSizes = linspace(4, 14, length(scalDampHatArr));  % marker size scales with damping
+
+figure; hold on;
+
+for d = 1:length(scalDampHatArr)
+    scalDampHat = scalDampHatArr(d);
+
+    t = linspace(1, 0, length(scalSpringConstArr))';
+    colors = [t, zeros(length(t),1), 1-t];
+    colors = flip(colors);
+
+    for j = 1:length(scalSpringConstArr)
+        scalSpringConst = scalSpringConstArr(j);
+
+        ratios           = nan(size(NArr));
+        lambdas_theory   = nan(size(NArr));
+        lambdas_measured = nan(size(NArr));
+
+        for i = 1:length(NArr)
+            [ratios(i), lambdas_theory(i), lambdas_measured(i)] = sim1d(scalH, ...
+                scalDampHat, NArr(i), scalMassRatio, scalSpringRatio, scalSpringConst);
+        end
+
+        e = sqrt(max(ratios, 0));
+        e(ratios <= .2) = NaN;
+        e_max   = max(e, [], 'omitnan');
+        e_tilde = e ./ e_max;
+
+        % only add legend entry for first damping level to avoid clutter
+        if d == 1
+            dispName = sprintf('$k = %.2f$', scalSpringConst);
+        else
+            dispName = '';
+        end
+
+        semilogx(NArr, e_tilde, 'o-', ...
+            'LineWidth',   1.5, ...
+            'MarkerSize',  markerSizes(d), ...
+            'Color',       colors(j,:), ...
+            'DisplayName', dispName);
+    end
+end
+
+% dummy lines for damping legend
+ax = gca;
+for d = 1:length(scalDampHatArr)
+    plot(nan, nan, 'ko-', ...
+        'MarkerSize',  markerSizes(d), ...
+        'LineWidth',   1.5, ...
+        'DisplayName', sprintf('$\\hat{\\gamma} = %.4f$', scalDampHatArr(d)));
+end
+
+xlabel('$N$',          'Interpreter', 'latex', 'FontSize', 20);
+ylabel('$\tilde{e}$',  'Interpreter', 'latex', 'FontSize', 20);
+legend('show', 'Location', 'best', 'Interpreter', 'latex', 'FontSize', 11);
+title('Pressure + damping sweep', 'Interpreter', 'latex', 'FontSize', 20);
+grid on;
+xscale(gca, 'log');
+
