@@ -1,12 +1,10 @@
 % All defaults addpath("~/repos/BallBounce/src/");
 
-% NArr           = 2:1:40;
-NArr = 2:30;
-scalDampHat    = 0.001;
+scalDampHat    = 0;
 % scalH          = 6;
 scalH = 0.22 / (2 * sqrt(.0001));  % = 11
 scalH = 5;  % = 11
-scalMassBall    = 12;
+scalMassBall= 12;
 scalSpringBall = .4;                          % stiff — no tunneling
 
 ratios  = nan(size(NArr));
@@ -51,4 +49,4 @@ xlabel('$N$', Interpreter='latex', FontSize=20);
 ylabel('$\tilde{e}$', Interpreter='latex', FontSize=20);
 grid on;
 
-sim1d(scalH,scalDampHat, 6, scalSpringBall=scalSpringBall, scalMassBall = scalMassBall, visSim=true);
+sim1d(scalH,scalDampHat, 30, scalSpringBall=scalSpringBall, scalMassBall = scalMassBall, visSim=true);
