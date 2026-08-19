@@ -1,12 +1,12 @@
-function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeightDrop, scalDampHat, scalNumPart, options)
+function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeightDrop, scalDampHat, scalNumPart, scalSpringRatio, options)
 
     arguments
         scalHeightDrop (1,1) double
         scalDampHat (1,1) double
         scalNumPart (1,1) double
-        options.scalDampHatBall    (1,1) double = scalDampHat       % defaults to chain valu
+        scalSpringRatio    (1,1) double
         options.scalMassBall    (1,1) double = 1
-        options.scalSpringBall  (1,1) double = 1 % ball spring constant
+        options.scalDampHatBall    (1,1) double = scalDampHat       % defaults to chain valu
         options.visSim (1,1) logical = false
         options.scalPressure (1,1) double = 0.0
         options.scalGravityScale (1,1) double = 0.0001 % should be smaller than compression from impact
@@ -33,9 +33,10 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     scalDiam = 1;
     scalMass = 2;
     scalSpringConst = 5;
+    scalSpringBall = scalSpringRatio * scalSpringConst;
     scalNatFreq = sqrt(scalSpringConst/scalMass);
     scalDamp = 2 * scalDampHat * sqrt(scalSpringConst * scalMass);
-    scalDampBall = 2 * options.scalDampHatBall * sqrt(options.scalSpringBall * options.scalMassBall);
+    scalDampBall = 2 * options.scalDampHatBall * sqrt(scalSpringBall * options.scalMassBall);
     scalGravity = options.scalGravityScale*scalNatFreq^2*2*scalHeightDrop;
     scalTimeTotal = (2*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq)); % time to drop + 1/2  period
     % scalFreqCollision = 1/scalTimeTotal;
@@ -75,8 +76,8 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     vecDest = [(2:scalNumPart)'; (1:scalNumPart-1)']; % index of particle on other end of spring
     vecDistRest = repmat(scalDiam * (1 - options.scalPressure), 2*(scalNumPart-1), 1);
     vecSpringConst        = ones(2*(scalNumPart-1), 1) * scalSpringConst;
-    vecSpringConst(1)     = options.scalSpringBall;  % sour=1→dest=2
-    vecSpringConst(scalNumPart) = options.scalSpringBall;  % reverse: sour=2→dest=1
+    vecSpringConst(1)     = scalSpringBall;  % sour=1→dest=2
+    vecSpringConst(scalNumPart) = scalSpringBall;  % reverse: sour=2→dest=1
     
 %% GPU transfer
     if useGPU
@@ -206,8 +207,8 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     fprintf('[analysis] tau_contact: %.4f\n', scalTauContact);
 
     % "τ is half the total contact time for a symmetric impact"
-    scalTauContactTheory = .5 * pi / sqrt(options.scalSpringBall / options.scalMassBall);
-    fprintf('[analysis] tau_thoery: %.4f\n', pi/sqrt(options.scalSpringBall/options.scalMassBall));
+    scalTauContactTheory = .5 * pi / sqrt(scalSpringBall / options.scalMassBall);
+    fprintf('[analysis] tau_thoery: %.4f\n', pi/sqrt(scalSpringBall/options.scalMassBall));
 
 %% measured wavespeed
 
