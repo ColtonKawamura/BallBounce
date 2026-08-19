@@ -41,7 +41,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     scalDamp = 2 * scalDampHat * sqrt(scalSpringConst * scalMass);
     scalDampBall = 2 * options.scalDampHatBall * sqrt(scalSpringBall * scalMassBall);
     scalGravity = options.scalGravityScale*scalNatFreq^2*2*scalHeightDrop;
-    scalTimeTotal = (2*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq)); % time to drop + 1/2  period
+    scalTimeTotal = (1.5*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq)); % time to drop + 1/2  period
     % scalFreqCollision = 1/scalTimeTotal;
     scalOmegaMax = sqrt(max(scalSpringConst, scalSpringBall) / min(scalMass, scalMassBall));
     scalTimeStep = pi / scalOmegaMax * 0.005;
@@ -208,7 +208,13 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     idxVelZero = vecPeakIdx(1) + scalIdxCrossZero + 1;
 
     % contact time = first contact to velocity zero crossing
-    scalTauContact =.5.*( vecTime(idxVelZero) - vecTime(idxFirstContact));
+    % scalTauContact =.5.*( vecTime(idxVelZero) - vecTime(idxFirstContact));
+    % fprintf('[analysis] tau_contact: %.4f\n', scalTauContact);
+    if isempty(idxVelZero) || isempty(idxFirstContact)
+        scalTauContact = NaN;
+    else
+        scalTauContact = 0.5 * (vecTime(idxVelZero) - vecTime(idxFirstContact));
+    end
     fprintf('[analysis] tau_contact: %.4f\n', scalTauContact);
 
     % "τ is half the total contact time for a symmetric impact"
@@ -273,7 +279,10 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
         xlabel('time', 'Interpreter', 'LaTeX', 'FontSize', 20);
         ylabel('$K_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
         xline(vecTime(idxFirstContact), '--w', 'contact',   'LabelVerticalAlignment','bottom');
-    xline(vecTime(idxVelZero),      '--y', 'vel = 0',   'LabelVerticalAlignment','bottom');
+        if idxVelZero ~= 0
+            xline(vecTime(idxVelZero),      '--y', 'vel = 0',   'LabelVerticalAlignment','bottom');
+        end
+
         grid on;
     end
 

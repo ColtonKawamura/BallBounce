@@ -261,14 +261,15 @@ grid on;
 
 
 %%% double sweep
-NArr = 2:40;
+NArr = 2:28;
 scalH         = 5;
-scalMassRatio = 6;
+scalMassRatio = 10;
 scalSpringRatio = 0.2;  % fixed
 
-scalSpringConstArr = logspace(.6, 1.14, 5);   % high=red (high pressure), low=blue (low pressure)
-scalDampHatArr = logspace(-3, -1, 10);      % low=small marker, high=large marker
-
+scalSpringConstArr = logspace(.4, .9, 5);   % high=red (high pressure), low=blue (low pressure)
+% scalDampHatArr = logspace(-3, -1, 10);      % low=small marker, high=large marker
+% scalDampHatArr = logspace(-3, -2, 4);  % 0.001 to 0.01
+scalDampHatArr = [0.001, 0.0001]; 
 markerSizes = linspace(4, 14, length(scalDampHatArr));  % marker size scales with damping
 
 figure; hold on;
@@ -288,6 +289,9 @@ for d = 1:length(scalDampHatArr)
         lambdas_measured = nan(size(NArr));
 
         for i = 1:length(NArr)
+            fprintf("running damping: %.2f \n", scalDampHat);
+            fprintf("running spring: %.2f \n", scalSpringConst);
+            fprintf("running N : %.2f \n", NArr(i));
             [ratios(i), lambdas_theory(i), lambdas_measured(i)] = sim1d(scalH, ...
                 scalDampHat, NArr(i), scalMassRatio, scalSpringRatio, scalSpringConst);
         end
@@ -297,14 +301,11 @@ for d = 1:length(scalDampHatArr)
         e_max   = max(e, [], 'omitnan');
         e_tilde = e ./ e_max;
 
-        % only add legend entry for first damping level to avoid clutter
-        if d == 1
-            dispName = sprintf('$k = %.2f$', scalSpringConst);
-        else
-            dispName = '';
-        end
+        dispName = sprintf('$k = %.2f,\\ \\hat{\\gamma} = %.4f$', scalSpringConst, scalDampHat);
 
-        semilogx(NArr, e_tilde, 'o-', ...
+
+        % semilogx(NArr, e_tilde, 'o-', ...
+        semilogx(NArr, e, 'o-', ...
             'LineWidth',   1.5, ...
             'MarkerSize',  markerSizes(d), ...
             'Color',       colors(j,:), ...
@@ -314,17 +315,15 @@ end
 
 % dummy lines for damping legend
 ax = gca;
-for d = 1:length(scalDampHatArr)
-    plot(nan, nan, 'ko-', ...
-        'MarkerSize',  markerSizes(d), ...
-        'LineWidth',   1.5, ...
-        'DisplayName', sprintf('$\\hat{\\gamma} = %.4f$', scalDampHatArr(d)));
-end
 
 xlabel('$N$',          'Interpreter', 'latex', 'FontSize', 20);
-ylabel('$\tilde{e}$',  'Interpreter', 'latex', 'FontSize', 20);
+% ylabel('$\tilde{e}$',  'Interpreter', 'latex', 'FontSize', 20);
+ylabel('$e$',  'Interpreter', 'latex', 'FontSize', 20);
 legend('show', 'Location', 'best', 'Interpreter', 'latex', 'FontSize', 11);
-title('Pressure + damping sweep', 'Interpreter', 'latex', 'FontSize', 20);
 grid on;
 xscale(gca, 'log');
+
+% scalDampHat = 0.0001;
+% scalSpringConst = 7;
+% sim1d(scalH ,scalDampHat, 30, scalMassRatio, scalSpringRatio ,scalSpringConst, visSim=true);
 
