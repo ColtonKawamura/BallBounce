@@ -1,10 +1,10 @@
 % All defaults addpath("~/repos/BallBounce/src/");
 NArr = 2:15;
-scalDampHat    = 0.005;
+scalDampHat    = 0.001;
 % scalH = 0.22 / (2 * sqrt(.0001));  % = 11
 scalH = 5;  % = 11
-scalMassBall= 12;
-scalSpringRatio = .08;                          % stiff — no tunneling
+scalMassRatio= 6; % ratio of ball to chain
+scalSpringRatio = .08; % ratio of ball to chain (increases contact time)
 
 ratios  = nan(size(NArr));
 lambdas_theory = nan(size(NArr));
@@ -15,10 +15,9 @@ for i = 1:length(NArr)
     [ratios(i), lambdas_theory(i), lambdas_measured(i)] = sim1d(scalH,...
         scalDampHat,...
         NArr(i), ...
-        scalSpringRatio, ...
-        scalMassBall=scalMassBall ...
+        scalMassRatio, ...
+        scalSpringRatio ...
         );
-    fprintf('N=%d  Lambda=%.3f  e=%.4f\n', NArr(i), lambdas(i), sqrt(ratios(i)));
 end
 
 e = sqrt(max(ratios, 0)); % i'm  outputing KE
@@ -45,4 +44,4 @@ xlabel('$N$', Interpreter='latex', FontSize=20);
 ylabel('$\tilde{e}$', Interpreter='latex', FontSize=20);
 grid on;
 
-sim1d(scalH,scalDampHat, 5, scalSpringBall=scalSpringBall, scalMassBall = scalMassBall, visSim=true);
+sim1d(scalH,scalDampHat, 5, scalMassRatio, scalSpringRatio , visSim=true);
