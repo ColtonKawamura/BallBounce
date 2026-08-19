@@ -180,8 +180,7 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
         ylabel('$K_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
     end
 
-    %% analysis
-    ballVel = matVelX(1,:);
+%% analysis
 
     % find moment ball separates from chain: last time step where ball overlaps particle 2
     ballPos  = matPosX(1,:);
@@ -195,6 +194,7 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     % need to add idxFirstContact so it's relative to the original index list
     idxFirstSeparation = idxFirstContact + find(~inContact(idxFirstContact:end), 1, 'first');
 
+    ballVel = matVelX(1,:);
     scalV_before = max(abs(ballVel(1:idxFirstContact))); % finds max from start to first contact
 
     % find the first index of first separation after initial contact
@@ -225,6 +225,7 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     end
     fprintf('[analysis] v_after:  %.4f\n', scalV_after);
 
+%% Find Peaks of KE
     vecKE = 0.5 * options.scalMassBall * ballVel.^2;
 
     [peakVals, ~] = findpeaks(vecKE);
@@ -236,10 +237,10 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     scalRatioKE = scalKE_after / scalKE_before;
     scalV_before = sqrt(2*scalKE_before / options.scalMassBall);
     scalV_after  = sqrt(2*scalKE_after  / options.scalMassBall);
+    fprintf('[analysis] e:        %.4f\n', scalV_after/scalV_before);
 
-    % scalRatioKE  = (scalV_after / scalV_before).^2;  % e^2 for consistency
 
-    % wave travel time:
+%%wave travel time:
 
     % scalTauContactTheory = pi / sqrt(options.scalSpringBall / scalMass); % this is what the paper uses
     scalTauContactTheory = pi / sqrt(options.scalSpringBall / options.scalMassBall);
@@ -277,13 +278,6 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
 
 
 %% Debugging
-    fprintf('[analysis] e:        %.4f\n', scalV_after/scalV_before);
-    % fprintf('[analysis] idxFirstContact:    %d  (t=%.3f)\n',...
-    %     idxFirstContact,...
-    %     vecTime(idxFirstContact));
-    % fprintf('[analysis] idxFirstSeparation: %d  (t=%.3f)\n',...
-    %     idxFirstSeparation,...
-    %     vecTime(idxFirstSeparation));
     fprintf('[analysis] tau_contact: %.4f\n', scalTauContact);
     fprintf('[analysis] tau_expected: %.4f\n', pi/sqrt(options.scalSpringBall/options.scalMassBall));
     fprintf('[analysis] c_theory: %.4f\n', scalNatFreq * scalDiam);
