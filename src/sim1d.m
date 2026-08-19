@@ -171,9 +171,9 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     vecKE = 0.5 * options.scalMassBall * vecBallVel.^2;
 
     % if the second peak is not found, set it to 0
+    % use first two peaks in chronological order  in case they are about equal
     try 
         [vecPeakVals, vecPeakIdx] = findpeaks(vecKE);
-        % use first two peaks in chronological order
         scalKE_before = vecPeakVals(1);
         scalKE_after  = vecPeakVals(2);
     catch ME
@@ -188,7 +188,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     fprintf('[analysis] e: %.4f\n', scalV_after/scalV_before);
 
 
-%% Meaured Contact Time
+%%  Contact Time
 
     % find moment bal gets in contact with chain
     vecBallPosX  = matPosX(1,:);
@@ -202,8 +202,12 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     idxVelZero = vecPeakIdx(1) + scalIdxCrossZero + 1;
 
     % contact time = first contact to velocity zero crossing
-    scalTauContact = vecTime(idxVelZero) - vecTime(idxFirstContact);
+    scalTauContact =.5.*( vecTime(idxVelZero) - vecTime(idxFirstContact));
     fprintf('[analysis] tau_contact: %.4f\n', scalTauContact);
+
+    % "τ is half the total contact time for a symmetric impact"
+    scalTauContactTheory = .5 * pi / sqrt(options.scalSpringBall / options.scalMassBall);
+    fprintf('[analysis] tau_thoery: %.4f\n', pi/sqrt(options.scalSpringBall/options.scalMassBall));
 
 %% measured wavespeed
 
@@ -231,8 +235,6 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     fprintf('[analysis] c_theory: %.4f\n', scalWaveSpeed_Theory);
 
 %% Lambda From Theory
-    scalTauContactTheory = pi / sqrt(options.scalSpringBall / options.scalMassBall);
-    fprintf('[analysis] tau_thoery: %.4f\n', pi/sqrt(options.scalSpringBall/options.scalMassBall));
 
     scalLambdaTheory = 2*(scalNumPart-1)*scalDiam / (scalNatFreq*scalDiam*scalTauContactTheory);
     fprintf('[analysis] Lambda_theory: %.4f\n', scalLambdaTheory);
