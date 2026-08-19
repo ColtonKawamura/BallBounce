@@ -33,8 +33,10 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
 %% physical constant calculations
     scalDiam = 1;
     scalMass = 2;
+    % scalMassBall = scalMassRatio * scalMass;
     scalMassBall = scalMassRatio * scalMass;
-    scalSpringBall = scalSpringRatio * scalSpringConst;
+    % scalSpringBall = scalSpringRatio * scalSpringConst;
+    scalSpringBall = 1;
     scalNatFreq = sqrt(scalSpringConst/scalMass);
     scalDamp = 2 * scalDampHat * sqrt(scalSpringConst * scalMass);
     scalDampBall = 2 * options.scalDampHatBall * sqrt(scalSpringBall * scalMassBall);
