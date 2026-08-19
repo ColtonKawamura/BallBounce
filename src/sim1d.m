@@ -1,4 +1,4 @@
-function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeightDrop, scalDampHat, scalNumPart, scalMassRatio, scalSpringRatio, options)
+function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeightDrop, scalDampHat, scalNumPart, scalMassRatio, scalSpringRatio,scalSpringConst, options)
 
     arguments
         scalHeightDrop (1,1) double
@@ -6,6 +6,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
         scalNumPart (1,1) double
         scalMassRatio    (1,1) double 
         scalSpringRatio    (1,1) double
+        scalSpringConst   (1,1) double  = 5
         options.scalDampHatBall    (1,1) double = scalDampHat       % defaults to chain valu
         options.visSim (1,1) logical = false
         options.scalPressure (1,1) double = 0.0
@@ -33,7 +34,6 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     scalDiam = 1;
     scalMass = 2;
     scalMassBall = scalMassRatio * scalMass;
-    scalSpringConst = 5;
     scalSpringBall = scalSpringRatio * scalSpringConst;
     scalNatFreq = sqrt(scalSpringConst/scalMass);
     scalDamp = 2 * scalDampHat * sqrt(scalSpringConst * scalMass);
@@ -41,7 +41,9 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     scalGravity = options.scalGravityScale*scalNatFreq^2*2*scalHeightDrop;
     scalTimeTotal = (2*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq)); % time to drop + 1/2  period
     % scalFreqCollision = 1/scalTimeTotal;
-    scalTimeStep = pi*sqrt(scalMass/scalSpringConst)*0.005; % this is 1/1000 of a period
+    scalOmegaMax = sqrt(max(scalSpringConst, scalSpringBall) / min(scalMass, scalMassBall));
+    scalTimeStep = pi / scalOmegaMax * 0.005;
+    % scalTimeStep = pi*sqrt(scalMass/scalSpringConst)*0.005; % this is 1/1000 of a period
     scalTimeStepHalf = .5 * scalTimeStep;
     scalTimeStepHalfSquared = .5 * scalTimeStep^2;
     scalLogInterval = scalTimeStep/10;
