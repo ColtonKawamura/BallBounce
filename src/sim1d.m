@@ -48,8 +48,8 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     vecMass = ones(scalNumPart,1)*scalMass;
     vecMass(1) = options.scalMassBall;
     vecDamp = ones(scalNumPart,1) * scalDamp;
-    % vecDamp(1) = scalDampBall;
-    vecDamp(1) = 0;
+    vecDamp(1) = scalDampBall;
+    % vecDamp(1) = 0;
     vecPosX = ((0:scalNumPart-1) * scalDiam * (1 - options.scalPressure))';
     vecPosX(1) = vecPosX(2) - scalDiam - scalHeightDrop;
     vecVelocityX = zeros(scalNumPart,1);
@@ -167,8 +167,8 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
 
 
 %% Find Peaks of KE for restitution
-    ballVel = matVelX(1,:);
-    vecKE = 0.5 * options.scalMassBall * ballVel.^2;
+    vecBallVel = matVelX(1,:);
+    vecKE = 0.5 * options.scalMassBall * vecBallVel.^2;
 
     % if the second peak is not found, set it to 0
     try 
@@ -189,23 +189,24 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     fprintf('[analysis] e:        %.4f\n', scalV_after/scalV_before);
 
 
-%% Lambda From Computation
-    % find moment ball separates from chain: last time step where ball overlaps particle 2
-    ballPos  = matPosX(1,:);
-    chainPos = matPosX(2,:);
-    inContact = (chainPos - ballPos) < scalDiam; % 1 when touching, 0 when not in contact
 
-    % find first contact with the chain
+
+
+%% Lambda From Computation
+
+    % find moment ball separates from chain: last time step where ball overlaps particle 2
+    vecBallPosX  = matPosX(1,:);
+    vecChainLeadPosX = matPosX(2,:);
+    inContact = (vecChainLeadPosX - vecBallPosX) < scalDiam; % 1 when touching, 0 when not in contact
     idxFirstContact = find(inContact, 1, 'first');
 
-    % find the first index of first separation after initial contact
-    idxSepRelative = find(~inContact(idxFirstContact:end), 1, 'first');
+%% Find when velocity goes to zero after first KE peak
+    vecBallVelWindow = vecBallVel(vecPeakIdx(1):end);
+    scalIdxCrossZero = find(diff(sign(vecBallVelWindow)) ~= 0, 1, 'first');
+    idxVelZero = vecPeakIdx(1) + scalIdxCrossZero;
 
-    % combine two indicies to get the index of first separation relative to the original index list
-    idxFirstSeparation = idxFirstContact + idxSepRelative;
-
-%% TODO: their tau is 
-    scalTauContact = vecTime(idxFirstSeparation) - vecTime(idxFirstContact);
+    % contact time = first contact to velocity zero crossing
+    scalTauContact = vecTime(idxVelZero) - vecTime(idxFirstContact);
     fprintf('[analysis] tau_contact: %.4f\n', scalTauContact);
 
     % find() gives subarray, so need to add idxFirstContact to make relative to original
@@ -243,7 +244,7 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
         % xlabel('time', 'Interpreter', 'LaTeX', 'FontSize', 20);
         % ylabel('$v_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
         % grid on;
-        %
+
 
         figure;
         plot(vecTime, vecKE); hold on;
@@ -254,6 +255,8 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
         legend('KE', '$K_{\mathrm{before}}$', '$K_{\mathrm{after}}$', 'Interpreter','LaTeX');
         xlabel('time', 'Interpreter', 'LaTeX', 'FontSize', 20);
         ylabel('$K_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
+        xline(vecTime(idxFirstContact), '--w', 'contact',   'LabelVerticalAlignment','bottom');
+    xline(vecTime(idxVelZero),      '--y', 'vel = 0',   'LabelVerticalAlignment','bottom');
         grid on;
     end
 
