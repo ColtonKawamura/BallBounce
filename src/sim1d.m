@@ -182,50 +182,37 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
 
 %% analysis
 
-    % find moment ball separates from chain: last time step where ball overlaps particle 2
-    ballPos  = matPosX(1,:);
-    chainPos = matPosX(2,:);
-    inContact = (chainPos - ballPos) < scalDiam; % 1 when touching, 0 when not in contact
-
-    % find first contact with the chain
-    idxFirstContact = find(inContact, 1, 'first');
-
-    % find first index (AFTER FIRST CONTACT) when ball is no longer in contact
-    % need to add idxFirstContact so it's relative to the original index list
-    idxFirstSeparation = idxFirstContact + find(~inContact(idxFirstContact:end), 1, 'first');
-
-    ballVel = matVelX(1,:);
-    scalV_before = max(abs(ballVel(1:idxFirstContact))); % finds max from start to first contact
-
-    % find the first index of first separation after initial contact
-    idxSepRelative = find(~inContact(idxFirstContact:end), 1, 'first');
-
-    % combine two indicies to get the index of first separation relative to the original index list
-    idxFirstSeparation = idxFirstContact + idxSepRelative;
-
-    % flip with index of first sepration
-    notContact = ~inContact(idxFirstContact:end);
-
-    % avoid false positives by finding wher 3 consecutive time steps are false
-    consecFalse = find(conv(double(notContact), ones(1,3), 'valid') == 3, 1, 'first');
-
-    if isempty(consecFalse)
-        warning('[sim1d] No clean separation found — using idxFirstSeparation.');
-        idxTrueSeparation = idxFirstSeparation;
-    else
-        idxTrueSeparation = idxFirstContact + consecFalse - 1;
-    end
-
-    scalV_after = max(abs(ballVel(idxTrueSeparation:end)));
-
-    if scalV_before < 0.2 || scalV_before > 0.25
-        warning('[sim1d] V_before:  %.4f\n', scalV_before);
-    else
-       fprintf('[analysis] v_before: %.4f\n', scalV_before);
-    end
-    fprintf('[analysis] v_after:  %.4f\n', scalV_after);
+    %
+    %
+    %
+    % ballVel = matVelX(1,:);
+    % scalV_before = max(abs(ballVel(1:idxFirstContact))); % finds max from start to first contact
+    %
+    %
+    % % flip with index of first sepration
+    % notContact = ~inContact(idxFirstContact:end);
+    %
+    % % avoid false positives by finding wher 3 consecutive time steps are false
+    % consecFalse = find(conv(double(notContact), ones(1,3), 'valid') == 3, 1, 'first');
+    %
+    % if isempty(consecFalse)
+    %     warning('[sim1d] No clean separation found — using idxFirstSeparation.');
+    %     idxTrueSeparation = idxFirstSeparation;
+    % else
+    %     idxTrueSeparation = idxFirstContact + consecFalse - 1;
+    % end
+    %
+    % scalV_after = max(abs(ballVel(idxTrueSeparation:end)));
+    %
+    % if scalV_before < 0.2 || scalV_before > 0.25
+    %     warning('[sim1d] V_before:  %.4f\n', scalV_before);
+    % else
+    %    fprintf('[analysis] v_before: %.4f\n', scalV_before);
+    % end
+    % fprintf('[analysis] v_after:  %.4f\n', scalV_after);
 
 %% Find Peaks of KE
+    ballVel = matVelX(1,:);
     vecKE = 0.5 * options.scalMassBall * ballVel.^2;
 
     [peakVals, ~] = findpeaks(vecKE);
@@ -240,12 +227,27 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     fprintf('[analysis] e:        %.4f\n', scalV_after/scalV_before);
 
 
-%%wave travel time:
+%% Lambda From Computation
+    % find moment ball separates from chain: last time step where ball overlaps particle 2
+    ballPos  = matPosX(1,:);
+    chainPos = matPosX(2,:);
+    inContact = (chainPos - ballPos) < scalDiam; % 1 when touching, 0 when not in contact
+
+    % % find first contact with the chain
+    idxFirstContact = find(inContact, 1, 'first');
+
+    % % find first index (AFTER FIRST CONTACT) when ball is no longer in contact
+    % % need to add idxFirstContact so it's relative to the original index list
+    idxFirstSeparation = idxFirstContact + find(~inContact(idxFirstContact:end), 1, 'first');
+
+    % % find the first index of first separation after initial contact
+    idxSepRelative = find(~inContact(idxFirstContact:end), 1, 'first');
+
+    % % combine two indicies to get the index of first separation relative to the original index list
+    idxFirstSeparation = idxFirstContact + idxSepRelative;
 
     % scalTauContactTheory = pi / sqrt(options.scalSpringBall / scalMass); % this is what the paper uses
-    scalTauContactTheory = pi / sqrt(options.scalSpringBall / options.scalMassBall);
     scalTauContact = vecTime(idxFirstSeparation) - vecTime(idxFirstContact);
-    scalLambdaTheory = 2*(scalNumPart-1)*scalDiam / (scalNatFreq*scalDiam*scalTauContactTheory);
 
     % to get scalLambda computationally, need to measure wavespeed directly
     % --- LEG 1: time to hit back wall ---
@@ -272,6 +274,9 @@ function [scalRatioKE, scalLambda] = sim1d(scalHeightDrop, scalDampHat, scalNumP
     scalRoundTrip= 2 * (scalLeg1 +scalLeg2);  % assuming symmetric return
     scalWaveSpeed = (scalNumPart-1)*scalDiam / (scalLeg1);
 
+%% Lambda From Theory
+    scalTauContactTheory = pi / sqrt(options.scalSpringBall / options.scalMassBall);
+    scalLambdaTheory = 2*(scalNumPart-1)*scalDiam / (scalNatFreq*scalDiam*scalTauContactTheory);
     scalLambda = scalLambdaTheory;
     % scalLambda = scalRoundTrip / scalTauContact;
 
