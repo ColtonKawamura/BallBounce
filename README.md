@@ -14,14 +14,18 @@ The following parameters can be tuned to investigate this effect:
 	- When $\hat{\gamma} >1$ means overdamped springs.
 - $\hat{v} = \frac{v_0}{d\sqrt{\frac{k_c}{m_c}}}$ =
 	- When $\hat{v}>1$, means that the kinetic energy from impact is greater than potential energy of the spring.
+
 $$
 \hat{v} = \frac{v_0}{d\sqrt{\frac{k_c}{m_c}}} \rightarrow \hat{v}^2 = \frac{v_0^2\,m}{d^2k}
 $$
+
 - $\hat{g} = \frac{g}{d_c^2\frac{k_c}{m_c}}$ 
 	- When $\hat{g}>1$, means that the gravity is stronger than force to full compress the chain spring
+
 $$
 \hat{g} = \frac{g}{d^2\frac{k_c}{m_c}} = \frac{gm}{d_ck_c}
 $$
+
 - $e$ = coefficient of restitution (dimensionless)
 - $\tau$  = contact time (time -TBD)
 # Idealized Effect
