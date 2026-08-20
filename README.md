@@ -6,15 +6,24 @@ with damped harmonic contacts, impacted by a single free particle under gravity.
 
 The following parameters can be tuned to investigate this effect:
 
-- **`scalHeightDrop`** — drop height of the impacting particle, setting the impact velocity $v = \sqrt{2g \cdot h}$
-- **`scalGravity`** — gravitational acceleration; controls how quickly particle 1 falls and returns after bouncing
-- **`scalSpringConst`** — contact stiffness; stiffer contacts produce shorter, sharper wave pulses that reflect faster
-- **`scalDamp`** — viscous damping; higher values dissipate the reflected wave before it can return to particle 1
-- **`scalNumPart`** — number of particles in the chain; sets the distance the wave travels before reflecting off the fixed wall
-- **`scalDiam`** — particle diameter; sets the lattice spacing and therefore the wave travel time
-- **`scalMass`** — particle mass; together with `scalSpringConst` sets the natural frequency $\omega_0 = \sqrt{k/m}$ and wave speed
-- **`scalPressure`** — static pre-compression; controls the equilibrium overlap and effective contact stiffness
-
+- $\hat{m} = \frac{m_b}{m_c}$ =  ratio of ball to chain mass
+- $\hat{k} = \frac{k_b}{k_c}$ = spring constant of the ball
+- $\hat{d} = \frac{d_b}{d_c}$ diameter ratio of ball to chain
+- $N$ = number of particles (already dimensionless)
+- $\hat{\gamma} = \frac{\gamma}{\sqrt{k_c\, m_c}}$ 
+	- When $\hat{\gamma} >1$ means overdamped springs.
+- $\hat{v} = \frac{v_0}{d\sqrt{\frac{k_c}{m_c}}}$ =
+	- When $\hat{v}>1$, means that the kinetic energy from impact is greater than potential energy of the spring.
+$$
+\hat{v} = \frac{v_0}{d\sqrt{\frac{k_c}{m_c}}} \rightarrow \hat{v}^2 = \frac{v_0^2\,m}{d^2k}
+$$
+- $\hat{g} = \frac{g}{d_c^2\frac{k_c}{m_c}}$ 
+	- When $\hat{g}>1$, means that the gravity is stronger than force to full compress the chain spring
+$$
+\hat{g} = \frac{g}{d^2\frac{k_c}{m_c}} = \frac{gm}{d_ck_c}
+$$
+- $e$ = coefficient of restitution (dimensionless)
+- $\tau$  = contact time (time -TBD)
 # Idealized Effect
 
 Below is an idealized effect. If the parameters are chosen in a certain way, the wave from the impact will travel through the chain and reflect back to eject the free particle upward.
