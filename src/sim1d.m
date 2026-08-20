@@ -1,16 +1,20 @@
-function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeightDrop, scalDampHat, scalNumPart, scalMassRatio, scalSpringRatio,scalSpringConst, options)
+function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHat, scalNumPart, scalMassRatio, scalSpringRatio, options)
 
     arguments
-        scalHeightDrop (1,1) double
         scalDampHat (1,1) double
         scalNumPart (1,1) double
-        scalMassRatio    (1,1) double 
-        scalSpringRatio    (1,1) double
-        scalSpringConst   (1,1) double  = 5
+        scalMassRatio  (1,1) double  % chain-to-ball mass ratio (>1 means chain heavier)
+        scalSpringRatio (1,1) double % chain-to-ball spring ratio (<1 means chain softer)
         options.scalDampHatBall    (1,1) double = 0.00001       % defaults to chain valu
         options.visSim (1,1) logical = false
         options.scalPressure (1,1) double = 0.0
-        options.scalGravityScale (1,1) double = 0.0001 % should be smaller than compression from impact
+        options.scalGravityScale (1,1) double = 0.00001 % should be smaller than compression from impact
+    end
+    % require an even number of particles so springs (N-1) are odd:
+    % stiff–soft–...–stiff
+    if mod(scalNumPart, 2) ~= 0
+        error('sim1d:scalNumPartEven', ...
+              'scalNumPart must be even so the chain starts and ends with stiff springs.');
     end
 
     %% GPU setup
@@ -31,40 +35,113 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     end
 
 %% physical constant calculations
-    scalDiam = 1;
-    scalMass = 2;
-    % scalMassBall = scalMassRatio * scalMass;
-    scalMassBall = scalMassRatio * scalMass;
-    % scalSpringBall = scalSpringRatio * scalSpringConst;
+    % these set tau = contact time
+    scalDiam      = 1;
+    scalMassBall  = 1;
     scalSpringBall = 1;
-    scalNatFreq = sqrt(scalSpringConst/scalMass);
-    scalDamp = 2 * scalDampHat * sqrt(scalSpringConst * scalMass);
+
+    % chain mass and spring relative to ball
+    scalMass        = scalMassRatio * scalMassBall;
+
+    % alternating stiff/soft chain springs (paper vs air)
+    scalSpringStiff = scalSpringBall;                 % stiff (paper-like)
+    scalSpringSoft  = scalSpringBall * scalSpringRatio;  % soft (air layer)
+
+    % effective stiffness of alternating stiff/soft springs (long-wavelength)
+    scalSpringConstEff = 2 ./ (1./scalSpringStiff + 1./scalSpringSoft);  % harmonic mean
+
+    % natural frequencies
+    scalNatFreqChain = sqrt(scalSpringConstEff / scalMass);      % chain
+    scalNatFreqBall  = sqrt(scalSpringBall / scalMassBall);   % ball (=1)
+
+    % damping
+    scalDamp     = 2 * scalDampHat * sqrt(scalSpringConstEff * scalMass);
     scalDampBall = 2 * options.scalDampHatBall * sqrt(scalSpringBall * scalMassBall);
-    scalGravity = options.scalGravityScale*scalNatFreq^2*2*scalHeightDrop;
-    scalTimeTotal = (1.5*(sqrt(2*scalHeightDrop/scalGravity)+pi/scalNatFreq)); % time to drop + 1/2  period
-    % scalFreqCollision = 1/scalTimeTotal;
-    scalOmegaMax = sqrt(max(scalSpringConst, scalSpringBall) / min(scalMass, scalMassBall));
-    scalTimeStep = pi / scalOmegaMax * 0.005;
-    % scalTimeStep = pi*sqrt(scalMass/scalSpringConst)*0.005; % this is 1/1000 of a period
-    scalTimeStepHalf = .5 * scalTimeStep;
-    scalTimeStepHalfSquared = .5 * scalTimeStep^2;
-    scalLogInterval = scalTimeStep/10;
+
+    % gravity: fixed scale, independent of scalSpringRatio
+    scalGravity  = options.scalGravityScale;
+
+    % total simulation time, should be time for wave to travel from particle 1 to N-1 and back
+    scalWavespeed = sqrt(scalSpringConstEff / scalMass) * scalDiam;
+    scalTimeTotal = 2.1*scalNumPart*scalDiam / scalWavespeed;
+
+    % time step: fraction of chain period
+    scalOmega   = scalNatFreqBall; 
+    scalPeriod = 2 * pi / scalOmega;
+    scalTimeStep   = scalPeriod * 0.005; 
+
+    scalTimeStepHalf = 0.5 * scalTimeStep;
+    scalTimeStepHalfSquared = 0.5 * scalTimeStep^2;
+    scalLogInterval = 1000;                % log every 1000 steps
+
+    %% dimensionless impact velocity (not from drop height)
+    % Physical parameters from the paper:
+    %   v_phys ≈ 1.98 m/s  (impact speed from 20 cm drop)
+    %   tau    ≈ 1.5e-3 s  (half contact time)
+    %   d      ≈ 1.14e-4 m (cell thickness)
+    %
+    % since my tau_thoery = half-contact time = pi / 2 = 1.57
+    % time unit =  (real world tau) / (sim tau) = 9.6 E-4 seconds
+
+    % With time unit t0 chosen so that tau* = pi/2 corresponds to tau,
+    % the corresponding dimensionless impact speed is v* ≈ 16.6.
+    scalVImpact = .99;   % dimensionless analog of the paper's impact speed
+    fprintf('[params] vImpact* (fixed) = %.3f\n', scalVImpact);
+
+    % displacement per timestep at impact (in diameters)
+    scalStepDisp = scalVImpact * scalTimeStep / scalDiam;
+    fprintf('[params] v* dt / d = %.3f (diameters per step)\n', scalStepDisp);
+
+    % warn if the ballmoves too far in one step for tunneling
+    if scalStepDisp > 0.2
+        warning(['[sim] Impact displacement per step is %.2f diameters (v* dt / d). ' ...
+                 'Reduce scalTimeStep or scalVImpact.'], ...
+                 scalStepDisp);
+    end
 
 %% pre allocations
-    vecMass = ones(scalNumPart,1)*scalMass;
+    % masses
+    % particle 1 = ball
+    % chain particles 2..scalNumPart:
+    %   odd chain index (2,4,6,...)  -> "stiff" mass  = scalMassBall
+    %   even chain index (3,5,7,...) -> "soft"  mass  = scalMassBall * scalMassRatio
+    %
+    % where chain index = p-1 for particle p.
+
+    vecMass = zeros(scalNumPart,1);
+
+    % ball mass
     vecMass(1) = scalMassBall;
+
+    % alternating chain masses
+    for p = 2:scalNumPart
+        chainIdx = p - 1;  % 1..N_chain
+        if mod(chainIdx, 2) == 1
+            % "stiff" site
+            vecMass(p) = scalMassBall;
+        else
+            % "soft" site
+            vecMass(p) = scalMassBall * scalMassRatio;
+        end
+    end
+
     vecDamp = ones(scalNumPart,1) * scalDamp;
     vecDamp(1) = scalDampBall;
-    % vecDamp(1) = 0;
     vecPosX = ((0:scalNumPart-1) * scalDiam * (1 - options.scalPressure))';
-    vecPosX(1) = vecPosX(2) - scalDiam - scalHeightDrop;
+
+    % Ball starts about one particle diameter above the first chain particle (touching)
+    vecPosX(1) = vecPosX(2) - scalDiam;
+
+    % Initial velocities: ball given downward impact speed v*, chain at rest
     vecVelocityX = zeros(scalNumPart,1);
+
+    vecVelocityX(1) = scalVImpact;   % downward (toward the chain)
     % vecAccelerationX = zeros(scalNumPart,1);
     vecAccelerationX_old = zeros(scalNumPart,1);
     % vecForceX = zeros(scalNumPart,1);
     vecTime = (0:scalTimeStep:scalTimeTotal);
     scalMaxTimeSteps = length( vecTime );
-    scalVisInterval = 100; % 
+    scalVisInterval =5; % 
 
     % depabtable if you want these - more memory for bigger sims
     if savePosVel
@@ -76,12 +153,26 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     % hertzian would be  t_contact propto (m^2/E^2 R v_0)^{1/5} or something
 
 %% edge list (using graph theorysyntax)
-    % produces a list of inditices of particles that are connected by a spring
     vecSour = [(1:scalNumPart-1)'; (2:scalNumPart)']; % index of particle on one end of spring
     vecDest = [(2:scalNumPart)'; (1:scalNumPart-1)']; % index of particle on other end of spring
     vecDistRest = repmat(scalDiam * (1 - options.scalPressure), 2*(scalNumPart-1), 1);
-    vecSpringConst        = ones(2*(scalNumPart-1), 1) * scalSpringConst;
-    vecSpringConst(1)     = scalSpringBall;  % sour=1→dest=2
+
+    % alternating stiff/soft springs along the chain (1–2, 2–3, ..., N-1–N)
+    numSprings = scalNumPart - 1;
+    vecSpringConstSingle = zeros(numSprings,1);
+    for j = 1:numSprings
+        if mod(j,2) == 1
+            vecSpringConstSingle(j) = scalSpringStiff;  % j = 1,3,5,... stiff
+        else
+            vecSpringConstSingle(j) = scalSpringSoft;   % j = 2,4,6,... soft
+        end
+    end
+
+    % duplicate for both directions in the edge list
+    vecSpringConst = [vecSpringConstSingle; vecSpringConstSingle];
+
+    % enforce ball–first-chain spring to be the ball stiffness
+    vecSpringConst(1) = scalSpringBall;  % sour=1→dest=2
     vecSpringConst(scalNumPart) = scalSpringBall;  % reverse: sour=2→dest=1
     
 %% GPU transfer
@@ -208,8 +299,6 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     idxVelZero = vecPeakIdx(1) + scalIdxCrossZero + 1;
 
     % contact time = first contact to velocity zero crossing
-    % scalTauContact =.5.*( vecTime(idxVelZero) - vecTime(idxFirstContact));
-    % fprintf('[analysis] tau_contact: %.4f\n', scalTauContact);
     if isempty(idxVelZero) || isempty(idxFirstContact)
         scalTauContact = NaN;
     else
@@ -219,7 +308,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
 
     % "τ is half the total contact time for a symmetric impact"
     scalTauContactTheory = .5 * pi / sqrt(scalSpringBall / scalMassBall);
-    fprintf('[analysis] tau_thoery: %.4f\n', pi/sqrt(scalSpringBall/scalMassBall));
+    fprintf('[analysis] tau_thoery: %.4f\n', scalTauContactTheory);
 
 %% measured wavespeed
 
@@ -232,8 +321,15 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     % wave arrival: first time vel(N-1) exceeds background AFTER first contact
     % find() returns index relative to the subarray starting at idxFirstContact+1
     % so add idxFirstContact to convert back to global time index
-    idxWaveArrival = idxFirstContact + ...
-        find(abs(velSecondToLast(idxFirstContact+1:end)) > velBackground + 1e-4, 1, 'first');
+    idxWaveArrivalRel = find(abs(velSecondToLast(idxFirstContact+1:end)) > velBackground + 1e-4, 1, 'first');
+    if isempty(idxWaveArrivalRel)
+        warning('idxWaveArrival did not detect wave hitting bottom');
+        idxWaveArrival = length(vecTime);        % fallback so downstream vecTime(idxWaveArrival) doesn't error
+    else
+        idxWaveArrival = idxFirstContact + idxWaveArrivalRel;
+    end
+
+
 
     % LEG 1: time for wave to travel from particle 1 to particle N-1
     % distance = (N-1) * d, time = idxWaveArrival - idxFirstContact
@@ -243,12 +339,12 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalHeight
     scalWaveSpeed_Measured = (scalNumPart-1)*scalDiam / scalLeg1;
     fprintf('[analysis] c_measured: %.4f\n', scalWaveSpeed_Measured);
 
-    scalWaveSpeed_Theory = sqrt(scalSpringConst / scalMass) * scalDiam;
+    scalWaveSpeed_Theory = sqrt(scalSpringConstEff / scalMass) * scalDiam;
     fprintf('[analysis] c_theory: %.4f\n', scalWaveSpeed_Theory);
 
 %% Lambda From Theory
 
-    scalLambdaTheory = 2*(scalNumPart-1)*scalDiam / (scalNatFreq*scalDiam*scalTauContactTheory);
+    scalLambdaTheory = 2*(scalNumPart-1)*scalDiam / (scalNatFreqChain*scalDiam*scalTauContactTheory);
     fprintf('[analysis] Lambda_theory: %.4f\n', scalLambdaTheory);
     % scalLambda = scalRoundTrip / scalTauContact;
 
