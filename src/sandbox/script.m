@@ -174,7 +174,7 @@ for j = 1:length(scalSpringConstArr)
     semilogx(lambdas_theory, e_tilde, 'o-', ...
         'LineWidth', 2, ...
         'Color', colors(j,:), ...
-        'DisplayName', sprintf('$k = %.2f$', scalSpringConst));
+        'DisplayName', sprintf('$k = %.2f$', scalSpringHat));
 end
 
 xlabel('$\Lambda = 2Nd/c\tau$', 'Interpreter', 'latex', 'FontSize', 20);
@@ -260,63 +260,52 @@ grid on;
 
 
 
-%%% double sweep
-NArr = 2:28;
-scalH         = 5;
-scalMassRatio = 10;
-scalSpringConst = 1;  % fixed ball reference
+%% Single one
+scalDampHat = 0.0001;
+scalMassHat = 1; % ratio of ball to chain
+scalSpringHat = 2; % ratio of ball to chain
+sim1d(scalDampHat, 14, scalMassHat, scalSpringHat, visSim=true);
 
-scalSpringRatioArr = logspace(-2, -0.5, 5);  % chain-to-ball spring ratio: soft=blue, stiff=red
-scalDampHatArr = [0.001, 0.0001]; 
-markerSizes = linspace(4, 14, length(scalDampHatArr));
+
+
+%% double sweep
+NArr = 2:20;
+scalDampHat = 0.0001;
+scalMassHat = 1; % ball to chain
+% scalSpringHattArr = logspace(.6, 1.14, 10);  % high=red (high pressure), low=blue (low pressure)
+scalSpringHatArr = [.9, .99,1, 1.1, 2, 2.1];
 
 figure; hold on;
+t = linspace(1, 0, length(scalSpringHatArr))';
+colors = [t, zeros(length(t),1), 1-t];
+colors = flip(colors);
 
-for d = 1:length(scalDampHatArr)
-    scalDampHat = scalDampHatArr(d);
+for j = 1:length(scalSpringHatArr)
+    scalSpringHat = scalSpringHatArr(j);
 
-    t = linspace(1, 0, length(scalSpringRatioArr))';
-    colors = [t, zeros(length(t),1), 1-t];
-    colors = flip(colors);
+    ratios           = nan(size(NArr));
+    lambdas_theory   = nan(size(NArr));
+    lambdas_measured = nan(size(NArr));
 
-    for j = 1:length(scalSpringRatioArr)
-        scalSpringRatio = scalSpringRatioArr(j);
-
-        ratios           = nan(size(NArr));
-        lambdas_theory   = nan(size(NArr));
-        lambdas_measured = nan(size(NArr));
-
-        for i = 1:length(NArr)
-            fprintf("running damping: %.4f \n", scalDampHat);
-            fprintf("running spring ratio: %.4f \n", scalSpringRatio);
-            fprintf("running N : %d \n", NArr(i));
-            [ratios(i), lambdas_theory(i), lambdas_measured(i)] = sim1d(scalH, ...
-                scalDampHat, NArr(i), scalMassRatio, scalSpringRatio);
-        end
-
-        e = sqrt(max(ratios, 0));
-        e(ratios <= .2) = NaN;
-
-        dispName = sprintf('$k_r = %.3f,\\ \\hat{\\gamma} = %.4f$', scalSpringRatio, scalDampHat);
-
-        semilogx(NArr, e, 'o-', ...
-            'LineWidth',   1.5, ...
-            'MarkerSize',  markerSizes(d), ...
-            'Color',       colors(j,:), ...
-            'DisplayName', dispName);
+    for i = 1:length(NArr)
+        [ratios(i), lambdas_theory(i), lambdas_measured(i)] = sim1d(scalDampHat, NArr(i), scalMassHat, scalSpringHat, scalVImpactHat=.5);
     end
+
+    e = sqrt(max(ratios, 0));
+    e(ratios <= .2) = NaN;
+    e_max   = max(e, [], 'omitnan');
+    e_tilde = e ./ e_max;
+
+    % semilogx(lambdas_measured, e_tilde, 'o-', ...
+    semilogx(NArr, e_tilde, 'o-', ...
+        'LineWidth', 2, ...
+        'Color', colors(j,:), ...
+        'DisplayName', sprintf('$k = %.2f$', scalSpringHat));
 end
 
-xlabel('$N$',         'Interpreter', 'latex', 'FontSize', 20);
-ylabel('$e$',         'Interpreter', 'latex', 'FontSize', 20);
-title('Pressure + damping sweep', 'Interpreter', 'latex', 'FontSize', 14);
-legend('show', 'Location', 'best', 'Interpreter', 'latex', 'FontSize', 11);
+xlabel('$N$', 'Interpreter', 'latex', 'FontSize', 20);
+% xlabel('$\Lambda = 2Nd/c\tau$', 'Interpreter', 'latex', 'FontSize', 20);
+ylabel('$\tilde{e}$',           'Interpreter', 'latex', 'FontSize', 20);
+legend('show', 'Location', 'best', 'Interpreter', 'latex', 'FontSize', 13);
 grid on;
 xscale(gca, 'log');
-
-scalH = .21;
-scalDampHat = 0.0001;
-scalMassRatio = .1; % ratio of chain to ball
-scalSpringRatio = .98; % ratio of chain to ball
-sim1d(scalH ,scalDampHat, 4, scalMassRatio, scalSpringRatio, visSim=true);
-
