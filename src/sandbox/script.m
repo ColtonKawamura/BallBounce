@@ -262,18 +262,17 @@ grid on;
 
 %% Single one
 scalDampHat = 0.0001;
-scalMassHat = 1; % ratio of ball to chain
+scalMassHat = 30; % ratio of ball to chain
 scalSpringHat = 2; % ratio of ball to chain
-sim1d(scalDampHat, 14, scalMassHat, scalSpringHat, visSim=true);
-
+sim1d(scalDampHat, 15, scalMassHat, scalSpringHat, visSim=true, scalVImpactHat=.01);
 
 
 %% double sweep
-NArr = 2:20;
-scalDampHat = 0.0001;
-scalMassHat = 1; % ball to chain
+NArr = 3:12;
+scalDampHat = 0.0075;
+scalMassHat = 30; % ball to chain
 % scalSpringHattArr = logspace(.6, 1.14, 10);  % high=red (high pressure), low=blue (low pressure)
-scalSpringHatArr = [.9, .99,1, 1.1, 2, 2.1];
+scalSpringHatArr = [.5,.75 1, 1.5];
 
 figure; hold on;
 t = linspace(1, 0, length(scalSpringHatArr))';
@@ -288,7 +287,7 @@ for j = 1:length(scalSpringHatArr)
     lambdas_measured = nan(size(NArr));
 
     for i = 1:length(NArr)
-        [ratios(i), lambdas_theory(i), lambdas_measured(i)] = sim1d(scalDampHat, NArr(i), scalMassHat, scalSpringHat, scalVImpactHat=.5);
+        [ratios(i), lambdas_theory(i), lambdas_measured(i)] = sim1d(scalDampHat, NArr(i), scalMassHat, scalSpringHat, scalVImpactHat=.01);
     end
 
     e = sqrt(max(ratios, 0));
@@ -296,15 +295,15 @@ for j = 1:length(scalSpringHatArr)
     e_max   = max(e, [], 'omitnan');
     e_tilde = e ./ e_max;
 
-    % semilogx(lambdas_measured, e_tilde, 'o-', ...
-    semilogx(NArr, e_tilde, 'o-', ...
+    % semilogx(NArr, e_tilde, 'o-', ...
+    semilogx(lambdas_measured, e_tilde, 'o-', ...
         'LineWidth', 2, ...
         'Color', colors(j,:), ...
-        'DisplayName', sprintf('$k = %.2f$', scalSpringHat));
+        'DisplayName', sprintf('$\\hat{k} = %.2f$', scalSpringHat));
 end
 
-xlabel('$N$', 'Interpreter', 'latex', 'FontSize', 20);
-% xlabel('$\Lambda = 2Nd/c\tau$', 'Interpreter', 'latex', 'FontSize', 20);
+% xlabel('$N$', 'Interpreter', 'latex', 'FontSize', 20);
+xlabel('$\Lambda = 2Nd/c\tau$', 'Interpreter', 'latex', 'FontSize', 20);
 ylabel('$\tilde{e}$',           'Interpreter', 'latex', 'FontSize', 20);
 legend('show', 'Location', 'best', 'Interpreter', 'latex', 'FontSize', 13);
 grid on;

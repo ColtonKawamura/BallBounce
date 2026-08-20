@@ -23,7 +23,8 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
         options.visSim             (1,1) logical = false
         options.scalPressure       (1,1) double = 0.0
         options.scalGravityHat     (1,1) double = .001
-        options.scalVImpactHat     (1,1) double = 0.2
+        options.scalVImpactHat     (1,1) double = 0.8
+        options.scalDiamHat        (1,1) double = 1.0
     end
 
     %% GPU setup
@@ -56,6 +57,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
     % so in these units:
     %   m_b* = scalMassHat,   m_c* = 1
     %   k_b* = scalSpringHat, k_c* = 1
+    scalDiamBall   = scalDiamChain* options.scalDiamHat;
     scalMassBall   = scalMassHat   * scalMassChain;
     scalSpringBall = scalSpringHat * scalSpringChain;
 
@@ -72,7 +74,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
 
     % total simulation time ~ one round trip along the chain
     scalWavespeed = sqrt(scalSpringChain / scalMassChain) * scalDiamChain;
-    scalTimeTotal = 10 * scalNumPart * scalDiamChain / scalWavespeed;
+    scalTimeTotal = 40 * scalNumPart * scalDiamChain / scalWavespeed;
 
     % time step: fraction of ball period
     scalOmega     = scalNatFreqBall;
@@ -287,8 +289,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
     scalWaveSpeed_Theory = sqrt(scalSpringChain / scalMassChain) * scalDiamChain;
     fprintf('[analysis] c_theory:   %.4f\n', scalWaveSpeed_Theory);
 
-    %% lambda
-
+%% lambda
     scalLambdaTheory = 2*(scalNumPart-1)*scalDiamChain / (scalNatFreqChain*scalDiamChain*scalTauContactTheory);
     fprintf('[analysis] Lambda_theory:   %.4f\n', scalLambdaTheory);
 
