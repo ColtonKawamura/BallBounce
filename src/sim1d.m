@@ -173,6 +173,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
     flagLostContact = false;    % has the ball lost contact with the chain yet?
     hadContact      = false;    % has contact ever occurred?
     idxWaveArrivalTopPred = Inf;
+    idxLastContactLoop = []; % index of last contact during integration
 
 %% main time integration
 
@@ -215,7 +216,8 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
             matVelX(:, step)   = gather(vecVelocityX);
             matAccelX(:, step) = gather(vecAccelerationX);
         end
-            % --- record first contact during integration ---
+
+        % --- record first contact during integration ---
         if isempty(idxFirstContactLoop) && inContactNow
             idxFirstContactLoop = step;
         end
@@ -239,6 +241,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
         if inContactNow
             hadContact = true;
         elseif hadContact && ~flagLostContact
+            idxLastContactLoop = step;
             flagLostContact = true;   % first time we lose contact after having contact
         end
 
@@ -277,44 +280,41 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
 
 %% analysis: first contact
 
-    vecBallPosX      = matPosX(1,:);
-    vecChainLeadPosX = matPosX(2,:);
-
-    % center–center distance between ball and first chain particle
-    vecDistBC = vecChainLeadPosX - vecBallPosX;      % units: diameters
-
-    % strict contact (original criterion)
-    vecInContactStrict = vecDistBC < scalDiamChain;
-    idxFirstContact    = find(vecInContactStrict, 1, 'first');
+    % vecBallPosX      = matPosX(1,:);
+    % vecChainLeadPosX = matPosX(2,:);
+    %
+    % % center–center distance between ball and first chain particle
+    % vecDistBC = vecChainLeadPosX - vecBallPosX;      % units: diameters
+    %
+    % % strict contact (original criterion)
+    % vecInContactStrict = vecDistBC < scalDiamChain;
+    % idxFirstContact    = find(vecInContactStrict, 1, 'first');
+    idxFirstContact = idxFirstContactLoop;
+    idxLastContact = idxLastContactLoop;
 
 
 %% analysis: "last" contact
 
 
     % tolerant contact: still "close" if within (d_c - tol)
-    scalLastContactTolAbs   = options.scalLastContactTol * scalDiamChain;
-    scalThreshLastContact   = scalDiamChain - scalLastContactTolAbs;
-
-    % ensure we actually have a first contact
-    if isempty(idxFirstContact)
-        warning('[contact] first contact not detected; using idxFirstContact = 1');
-        idxFirstContact = 1;
-    end
+    % scalLastContactTolAbs   = options.scalLastContactTol * scalDiamChain;
+    % scalThreshLastContact   = scalDiamChain - scalLastContactTolAbs;
 
     % search only after first contact, in a relative window
-    vecDistBCAfter    = vecDistBC(idxFirstContact:end);
-    idxLastContactRel = find(vecDistBCAfter < scalThreshLastContact, 1, 'last');
+    % vecDistBCAfter    = vecDistBC(idxFirstContact:end);
+    % idxLastContactRel = find(vecDistBCAfter < scalThreshLastContact, 1, 'last');
+    %
+    % if isempty(idxLastContactRel)
+    %     % no clear "last contact" within tolerance; fall back to first
+    %     warning('[last contact] no tolerant separation found; using first contact index');
+    %     idxLastContact = idxFirstContact;
+    % else
+    %     % convert relative index back to absolute
+    %     idxLastContact = idxFirstContact - 1 + idxLastContactRel;
+    % end
+    %
 
-    if isempty(idxLastContactRel)
-        % no clear "last contact" within tolerance; fall back to first
-        warning('[last contact] no tolerant separation found; using first contact index');
-        idxLastContact = idxFirstContact;
-    else
-        % convert relative index back to absolute
-        idxLastContact = idxFirstContact - 1 + idxLastContactRel;
-    end
-
-    % clamp indices to valid range
+    % % clamp indices to valid range
     idxFirstContact = max(1, min(idxFirstContact, numel(vecTime)));
     idxLastContact  = max(1, min(idxLastContact,  numel(vecTime)));
 
@@ -341,10 +341,11 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
         end
     end
 
-%% wave arrival top
 
-    scalTimeWaveArrivalBottom = vecTime(idxWaveArrival) - vecTime(idxFirstContact);
+%% wave arrival bottom & top (use loop indices)
 
+    % bottom arrival time: use the loop-detected index
+    scalTimeWaveArrivalBottom = vecTime(idxWaveArrivalLoop) - vecTime(idxFirstContactLoop);
 
 %% measured wavespeed
 
@@ -356,23 +357,14 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
 
 %% estimated time and index of wave arrival back at top
 
-    % time (relative to first contact) for the wave to go down and back up
-    scalTimeWaveReturnRel = 2 * scalTimeWaveArrivalBottom;
+    % use the predicted top-arrival index from the loop (same as yellow marker)
+    idxWaveArrivalTop      = idxWaveArrivalTopPred;
+    scalTimeWaveArrivalTop = vecTime(idxWaveArrivalTop);
 
-    % absolute time when the reflected wave reaches the top
-    scalTimeWaveArrivalTop = vecTime(idxFirstContact) + scalTimeWaveReturnRel;
-
-    % corresponding index in vecTime
-    idxWaveArrivalTop = find(vecTime >= scalTimeWaveArrivalTop, 1, 'first');
-
-    if isempty(idxWaveArrivalTop)
-        % fallback: clamp to end of simulation
-        idxWaveArrivalTop   = numel(vecTime);
-        scalTimeWaveArrivalTop = vecTime(end);
-    end
+    % relative return time (down + up) as actually used in the loop
+    scalTimeWaveReturnRel  = scalTimeWaveArrivalTop - vecTime(idxFirstContactLoop);
 
     fprintf('[analysis] t_wave_top: %.4f\n', scalTimeWaveArrivalTop);
-
 
 %% kintetic energy
 
