@@ -124,7 +124,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
 
     vecTime          = 0:scalTimeStep:scalTimeTotal;
     scalMaxTimeSteps = length(vecTime);
-    scalVisInterval  = 10;
+    scalVisInterval  = 1;
 
     if savePosVel
         matPosX   = zeros(scalNumPart, scalMaxTimeSteps);
@@ -163,6 +163,16 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
         matVelX(:, 1)   = gather(vecVelocityX);
         matAccelX(:, 1) = gather(vecAccelerationX_old);
     end
+
+    % --- wave-arrival detection state (used by both analysis and visSim) ---
+    idxFirstContactLoop   = [];     % first-contact index during integration
+    velBackgroundLoop     = NaN;    % background |v_{N-1}| before contact
+    flagWaveReachedBottom = false;  % has the wave reached the bottom yet?
+    idxWaveArrivalLoop    = [];     % index when wave first hits bottom
+    threshOffset          = 5e-2;   % same +1e-4 as in analysis
+    flagLostContact = false;    % has the ball lost contact with the chain yet?
+    hadContact      = false;    % has contact ever occurred?
+    idxWaveArrivalTopPred = Inf;
 
 %% main time integration
 
@@ -205,30 +215,66 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
             matVelX(:, step)   = gather(vecVelocityX);
             matAccelX(:, step) = gather(vecAccelerationX);
         end
+            % --- record first contact during integration ---
+        if isempty(idxFirstContactLoop) && inContactNow
+            idxFirstContactLoop = step;
+        end
+
+        % --- once we know first contact, build same background as analysis ---
+        if ~isempty(idxFirstContactLoop) && isnan(velBackgroundLoop)
+            velSecondToLastHist = matVelX(scalNumPart-1, 1:idxFirstContactLoop-1);
+            velBackgroundLoop   = mean(abs(velSecondToLastHist));
+        end
+
+        % --- wave arrival at bottom: SAME criterion as analysis ---
+        if ~flagWaveReachedBottom && ~isnan(velBackgroundLoop)
+            if abs(gather(vecVelocityX(scalNumPart-1))) > velBackgroundLoop + threshOffset
+                flagWaveReachedBottom = true;
+                idxWaveArrivalLoop    = step;  % store index for analysis
+                idxWaveArrivalTopPred = idxFirstContactLoop + 2*(idxWaveArrivalLoop - idxFirstContactLoop);
+            end
+        end
+
+        % --- contact / loss-of-contact tracking ---
+        if inContactNow
+            hadContact = true;
+        elseif hadContact && ~flagLostContact
+            flagLostContact = true;   % first time we lose contact after having contact
+        end
 
         if options.visSim && mod(step, scalVisInterval) == 0
             figure(figVis); cla;
-            for p = 1:scalNumPart
+
+           for p = 1:scalNumPart
                 theta = linspace(0, 2*pi, 64);
-                cx = gather(vecPosX(p));
-                plot(cx + (scalDiamChain/2)*cos(theta), (scalDiamChain/2)*sin(theta), 'w');
+                cx    = gather(vecPosX(p));
+
+                % default color
+                col = 'w';
+                if p == 2 && step >= idxWaveArrivalTopPred, col = 'y'; end   % yellow
+
+                % ball (p == 1) turns cyan after loss of contact
+                if p == 1 && flagLostContact
+                    col = 'c';
+                end
+
+                % last particle turns red once wave reached bottom
+                if p == scalNumPart && flagWaveReachedBottom
+                    col = 'r';
+                end
+
+                plot(cx + (scalDiamChain/2)*cos(theta), ...
+                     (scalDiamChain/2)*sin(theta), col);
                 hold on;
             end
+
+
             axis equal;
             drawnow;
 
-            frame = getframe(figVis);
-            img   = frame2im(frame);
-            [imgInd, cmap] = rgb2ind(img, 256);
-            if step == scalVisInterval
-                imwrite(imgInd, cmap, gifPath, 'gif', 'Loopcount', inf, 'DelayTime', 0.05);
-            else
-                imwrite(imgInd, cmap, gifPath, 'gif', 'WriteMode', 'append', 'DelayTime', 0.05);
-            end
         end
     end
 
-%% analysis: first contact
 %% analysis: first contact
 
     vecBallPosX      = matPosX(1,:);
@@ -280,13 +326,19 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
     velSecondToLast = matVelX(scalNumPart-1, :);
     velBackground   = mean(abs(velSecondToLast(1:idxFirstContact-1)));
 
-    idxWaveArrivalRel = find(abs(velSecondToLast(idxFirstContact+1:end)) ...
-                             > velBackground + 1e-4, 1, 'first');
-    if isempty(idxWaveArrivalRel)
-        warning('idxWaveArrival did not detect wave hitting bottom');
-        idxWaveArrival = length(vecTime);
+    if ~isempty(idxWaveArrivalLoop)
+        % use index detected during integration (same criterion)
+        idxWaveArrival = idxWaveArrivalLoop;
     else
-        idxWaveArrival = idxFirstContact + idxWaveArrivalRel;
+        % fallback: detect from history, as before
+        idxWaveArrivalRel = find(abs(velSecondToLast(idxFirstContact+1:end)) ...
+                                 > velBackground + 1e-4, 1, 'first');
+        if isempty(idxWaveArrivalRel)
+            warning('idxWaveArrival did not detect wave hitting bottom');
+            idxWaveArrival = length(vecTime);
+        else
+            idxWaveArrival = idxFirstContact + idxWaveArrivalRel;
+        end
     end
 
 %% wave arrival top

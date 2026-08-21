@@ -1,4 +1,157 @@
-% All defaults addpath("~/repos/BallBounce/src/");
+%% single
+scalDampHat = 0.015
+scalMassHat = 1; % ratio of ball to chain
+scalSpringHat = 2.5; % ratio of ball to chain
+sim1d(scalDampHat, 20, scalMassHat, scalSpringHat, visSim=true, plotKE=true, scalVImpactHat=.4, scalGravityHat=0);
+
+%%
+NArr           = 2:30;
+vecDampHat     = [0.016, .015];
+vecMassHat     = [1];               % ball-to-chain mass ratios
+vecVImpactHat  = [0.4];           % impact velocities
+vecSpringHat   = [2.5,3, 3.5, 5,5.5, 6, 10];
+
+scalGravityHat = 0;
+
+% --- single switch: choose which parameter controls dotted vs solid ---
+scalDottedBy = "mass";    % set to "mass" or "v"
+% ----------------------------------------------------------------------
+
+figure; hold on;
+
+% colors per spring value
+t      = linspace(1, 0, length(vecSpringHat))';
+colors = flip([t, zeros(length(t),1), 1-t]);
+
+% marker sizes per damping (larger damping -> larger markers)
+scalDampMin   = min(vecDampHat);
+scalDampMax   = max(vecDampHat);
+vecMarkerSize = 4 + 8 * (vecDampHat - scalDampMin) / (scalDampMax - scalDampMin);  % 4–12
+
+% line styles keyed by mass and by impact velocity
+vecLineStyleMass = repmat({"-"}, size(vecMassHat));     % default solid
+vecLineStyleMass(2:end) = {":"};                        % higher masses dotted
+
+vecLineStyleV    = repmat({"-"}, size(vecVImpactHat));  % default solid
+vecLineStyleV(2:end)    = {":"};                        % second/others dotted
+
+for idxSpring = 1:length(vecSpringHat)
+    scalSpringHat = vecSpringHat(idxSpring);
+
+    for idxMass = 1:length(vecMassHat)
+        scalMassHat = vecMassHat(idxMass);
+
+        for idxV = 1:length(vecVImpactHat)
+            scalVImpactHat = vecVImpactHat(idxV);
+
+            % choose line style based on single switch
+            if scalDottedBy == "mass"
+                scalLineStyle = vecLineStyleMass(idxMass);
+            else
+                scalLineStyle = vecLineStyleV(idxV);
+            end
+
+            for idxDamp = 1:length(vecDampHat)
+                scalDampHat = vecDampHat(idxDamp);
+
+                ratios           = nan(size(NArr));
+                lambdas_theory   = nan(size(NArr));
+                lambdas_measured = nan(size(NArr));
+
+                for idxN = 1:length(NArr)
+                    [ratios(idxN), lambdas_theory(idxN), lambdas_measured(idxN)] = ...
+                        sim1d(scalDampHat, NArr(idxN), scalMassHat, scalSpringHat, ...
+                              scalVImpactHat=scalVImpactHat, scalGravityHat=scalGravityHat);
+                end
+
+                e = sqrt(max(ratios, 0));
+                e(ratios <= .2) = NaN;
+
+                semilogx(NArr, e, ...
+                    'LineWidth', 1.5, ...
+                    'Color', colors(idxSpring,:), ...
+                    'Marker', 'o', ...
+                    'MarkerSize', vecMarkerSize(idxDamp), ...
+                    'LineStyle', scalLineStyle{1}, ...
+                    'DisplayName', sprintf('$\\hat{k}=%.2f,\\ \\hat{\\gamma}=%.3f,\\ \\hat{m}=%.2f,\\ \\hat{v}=%.2f$', ...
+                                           scalSpringHat, scalDampHat, scalMassHat, scalVImpactHat));
+            end
+        end
+    end
+end
+
+xlabel('$N$', 'Interpreter', 'latex', 'FontSize', 20);
+ylabel('$e$', 'Interpreter', 'latex', 'FontSize', 20);
+legend('show', 'Location', 'best', 'Interpreter', 'latex', 'FontSize', 13);
+grid on;
+xscale(gca, 'log');
+title('$\hat{g} = 0$', 'Interpreter', 'latex', 'FontSize', 20);
+%% kitchen sink
+
+NArr           = 2:30;
+vecDampHat     = [0, 0.01, .015];
+vecMassHat     = [1, 2,3];              % ball-to-chain mass ratios
+vecVImpactHat  = [0.2, 0.4];          % impact velocities
+vecSpringHat   = [1, 2.9, 3, 3.5, 5];
+
+figure; hold on;
+
+% colors per spring value
+t      = linspace(1, 0, length(vecSpringHat))';
+colors = [t, zeros(length(t),1), 1-t];
+colors = flip(colors);
+
+% marker sizes per damping (larger damping -> larger markers)
+scalDampMin   = min(vecDampHat);
+scalDampMax   = max(vecDampHat);
+vecMarkerSize = 4 + 8 * (vecDampHat - scalDampMin) / (scalDampMax - scalDampMin);  % 4–12
+
+for idxSpring = 1:length(vecSpringHat)
+    scalSpringHat = vecSpringHat(idxSpring);
+
+    for idxMass = 1:length(vecMassHat)
+        scalMassHat = vecMassHat(idxMass);
+
+        for idxV = 1:length(vecVImpactHat)
+            scalVImpactHat = vecVImpactHat(idxV);
+
+            for idxDamp = 1:length(vecDampHat)
+                scalDampHat = vecDampHat(idxDamp);
+
+                ratios           = nan(size(NArr));
+                lambdas_theory   = nan(size(NArr));
+                lambdas_measured = nan(size(NArr));
+
+                for idxN = 1:length(NArr)
+                    [ratios(idxN), lambdas_theory(idxN), lambdas_measured(idxN)] = ...
+                        sim1d(scalDampHat, NArr(idxN), scalMassHat, scalSpringHat, ...
+                              scalVImpactHat=scalVImpactHat, scalGravityHat=0);
+                end
+
+                e = sqrt(max(ratios, 0));
+                e(ratios <= .2) = NaN;
+
+                semilogx(NArr, e, 'o-', ...
+                    'LineWidth', 1.5, ...
+                    'Color', colors(idxSpring,:), ...
+                    'MarkerSize', vecMarkerSize(idxDamp), ...
+                    'DisplayName', sprintf('$\\hat{k}=%.2f,\\ \\hat{\\gamma}=%.3f,\\ \\hat{m}=%.2f,\\ \\hat{v}=%.2f$', ...
+                                           scalSpringHat, scalDampHat, scalMassHat, scalVImpactHat));
+            end
+        end
+    end
+end
+
+xlabel('$N$', 'Interpreter', 'latex', 'FontSize', 20);
+ylabel('$e$', 'Interpreter', 'latex', 'FontSize', 20);
+legend('show', 'Location', 'best', 'Interpreter', 'latex', 'FontSize', 13);
+grid on;
+xscale(gca, 'log');
+title('$\hat{g} = 0$', 'Interpreter', 'latex', 'FontSize', 20);
+
+
+
+%% All defaults addpath("~/repos/BallBounce/src/");
 NArr = 2:15;
 scalDampHat    = 0.001;
 % scalH = 0.22 / (2 * sqrt(.0001));  % = 11
@@ -261,18 +414,17 @@ grid on;
 
 
 %% Single one
-scalDampHat = 0.0001;
-scalMassHat = 20; % ratio of ball to chain
-scalSpringHat = 1; % ratio of ball to chain
-sim1d(scalDampHat, 5, scalMassHat, scalSpringHat, visSim=false, plotKE=true, scalVImpactHat=.3, scalGravityHat=0);
+scalMassHat = 5; % ratio of ball to chain
+scalSpringHat = 4; % ratio of ball to chain
+sim1d(scalDampHat, 24, scalMassHat, scalSpringHat, visSim=true, plotKE=true, scalVImpactHat=.41, scalGravityHat=0);
+
 
 scalMassHat = 5; % ratio of ball to chain
 scalSpringHat = 4; % ratio of ball to chain
-sim1d(scalDampHat, 24, scalMassHat, scalSpringHat, visSim=false, plotKE=true, scalVImpactHat=.4, scalGravityHat=0);
-
+sim1d(scalDampHat, 10, scalMassHat, scalSpringHat, visSim=false, plotKE=true, scalVImpactHat=.41, scalGravityHat=0);
 
 %% double sweep
-NArr = 18:45;
+NArr = 2:45;
 scalDampHat = 0.005;
 scalMassHat = 5; % ball to chain
 % scalSpringHattArr = logspace(.6, 1.14, 10);  % high=red (high pressure), low=blue (low pressure)
@@ -311,5 +463,166 @@ end
 xlabel('$N$', 'Interpreter', 'latex', 'FontSize', 20);
 ylabel('$e$',           'Interpreter', 'latex', 'FontSize', 20);
 legend('show', 'Location', 'best', 'Interpreter', 'latex', 'FontSize', 13);
+grid on;
+xscale(gca, 'log');
+
+
+
+%% test sweep
+NArr = 2:45;
+scalDampHat = 0.005;
+scalMassHat = 1; % ball to chain
+scalSpringHatArr = [3.5,3.75 4,4.25];
+scalSpringHatArr = [1.5,2,2.5,3, 4];
+
+figure; hold on;
+t = linspace(1, 0, length(scalSpringHatArr))';
+colors = [t, zeros(length(t),1), 1-t];
+colors = flip(colors);
+
+for j = 1:length(scalSpringHatArr)
+    scalSpringHat = scalSpringHatArr(j);
+
+    ratios           = nan(size(NArr));
+    lambdas_theory   = nan(size(NArr));
+    lambdas_measured = nan(size(NArr));
+
+    for i = 1:length(NArr)
+        [ratios(i), lambdas_theory(i), lambdas_measured(i)] = sim1d(scalDampHat, NArr(i), scalMassHat, scalSpringHat, scalVImpactHat=.4, scalGravityHat=0);
+    end
+
+    e = sqrt(max(ratios, 0));
+    e(ratios <= .2) = NaN;
+    e_max   = max(e, [], 'omitnan');
+    e_tilde = e ./ e_max;
+
+    % semilogx(lambdas_measured, e_tilde, 'o-', ...
+    semilogx(NArr, e, 'o-', ...
+        'LineWidth', 2, ...
+        'Color', colors(j,:), ...
+        'DisplayName', sprintf('$\\hat{k} = %.2f$', scalSpringHat));
+end
+
+% ylabel('$\tilde{e}$',           'Interpreter', 'latex', 'FontSize', 20);
+% xlabel('$\Lambda = 2Nd/c\tau$', 'Interpreter', 'latex', 'FontSize', 20);
+xlabel('$N$', 'Interpreter', 'latex', 'FontSize', 20);
+ylabel('$e$',           'Interpreter', 'latex', 'FontSize', 20);
+legend('show', 'Location', 'best', 'Interpreter', 'latex', 'FontSize', 13);
+grid on;
+xscale(gca, 'log');
+
+
+%% single
+scalDampHat = 0
+scalMassHat = 1; % ratio of ball to chain
+scalSpringHat = 4; % ratio of ball to chain
+sim1d(scalDampHat, 10, scalMassHat, scalSpringHat, visSim=false, plotKE=true, scalVImpactHat=.41, scalGravityHat=0);
+
+
+%% double sweep
+NArr           = 2:45;
+vecDampHat     = [0, 0.005,0.01];          % damping values to loop over
+scalMassHat    = 1;                             % ball to chain
+vecSpringHat   = [3, 4,5];           % spring ratios
+
+figure; hold on;
+
+% colors per spring value
+t      = linspace(1, 0, length(vecSpringHat))';
+colors = [t, zeros(length(t),1), 1-t];
+colors = flip(colors);
+
+% marker sizes per damping (larger damping -> larger markers)
+scalDampMin   = min(vecDampHat);
+scalDampMax   = max(vecDampHat);
+vecMarkerSize = 4 + 8 * (vecDampHat - scalDampMin) / (scalDampMax - scalDampMin);  % 4–12
+
+for idxSpring = 1:length(vecSpringHat)
+    scalSpringHat = vecSpringHat(idxSpring);
+
+    for idxDamp = 1:length(vecDampHat)
+        scalDampHat = vecDampHat(idxDamp);
+
+        ratios           = nan(size(NArr));
+        lambdas_theory   = nan(size(NArr));
+        lambdas_measured = nan(size(NArr));
+
+        for idxN = 1:length(NArr)
+            [ratios(idxN), lambdas_theory(idxN), lambdas_measured(idxN)] = ...
+                sim1d(scalDampHat, NArr(idxN), scalMassHat, scalSpringHat, ...
+                      scalVImpactHat=.4, scalGravityHat=0);
+        end
+
+        e = sqrt(max(ratios, 0));
+        e(ratios <= .2) = NaN;
+
+        semilogx(NArr, e, 'o-', ...
+            'LineWidth', 1.5, ...
+            'Color', colors(idxSpring,:), ...
+            'MarkerSize', vecMarkerSize(idxDamp), ...
+            'DisplayName', sprintf('$\\hat{k} = %.2f,\\ \\hat{\\gamma} = %.3f$', ...
+                                   scalSpringHat, scalDampHat));
+    end
+end
+
+xlabel('$N$', 'Interpreter', 'latex', 'FontSize', 20);
+ylabel('$e$', 'Interpreter', 'latex', 'FontSize', 20);
+legend('show', 'Location', 'best', 'Interpreter', 'latex', 'FontSize', 13);
+title(['$\hat{m} = 1, \hat{g} = 0, \hat{v} =0.4$'], 'Interpreter', 'latex', 'FontSize', 20);
+grid on;
+xscale(gca, 'log');
+
+
+
+%% double sweep
+NArr           = 2:100;
+vecDampHat     = [0, 0.01, .015];          % damping values to loop over
+scalMassHat    = 2;                             % ball to chain
+vecSpringHat   = [1,2.9,3, 3.5,5];           % spring ratios
+
+figure; hold on;
+
+% colors per spring value
+t      = linspace(1, 0, length(vecSpringHat))';
+colors = [t, zeros(length(t),1), 1-t];
+colors = flip(colors);
+
+% marker sizes per damping (larger damping -> larger markers)
+scalDampMin   = min(vecDampHat);
+scalDampMax   = max(vecDampHat);
+vecMarkerSize = 4 + 8 * (vecDampHat - scalDampMin) / (scalDampMax - scalDampMin);  % 4–12
+
+for idxSpring = 1:length(vecSpringHat)
+    scalSpringHat = vecSpringHat(idxSpring);
+
+    for idxDamp = 1:length(vecDampHat)
+        scalDampHat = vecDampHat(idxDamp);
+
+        ratios           = nan(size(NArr));
+        lambdas_theory   = nan(size(NArr));
+        lambdas_measured = nan(size(NArr));
+
+        for idxN = 1:length(NArr)
+            [ratios(idxN), lambdas_theory(idxN), lambdas_measured(idxN)] = ...
+                sim1d(scalDampHat, NArr(idxN), scalMassHat, scalSpringHat, ...
+                      scalVImpactHat=.4, scalGravityHat=0);
+        end
+
+        e = sqrt(max(ratios, 0));
+        e(ratios <= .2) = NaN;
+
+        semilogx(NArr, e, 'o-', ...
+            'LineWidth', 1.5, ...
+            'Color', colors(idxSpring,:), ...
+            'MarkerSize', vecMarkerSize(idxDamp), ...
+            'DisplayName', sprintf('$\\hat{k} = %.2f,\\ \\hat{\\gamma} = %.3f$', ...
+                                   scalSpringHat, scalDampHat));
+    end
+end
+
+xlabel('$N$', 'Interpreter', 'latex', 'FontSize', 20);
+ylabel('$e$', 'Interpreter', 'latex', 'FontSize', 20);
+legend('show', 'Location', 'best', 'Interpreter', 'latex', 'FontSize', 13);
+title(['$\hat{m} = 1, \hat{g} = 0, \hat{v} =0.4$'], 'Interpreter', 'latex', 'FontSize', 20);
 grid on;
 xscale(gca, 'log');
