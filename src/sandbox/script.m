@@ -266,17 +266,17 @@ scalMassHat = 20; % ratio of ball to chain
 scalSpringHat = 1; % ratio of ball to chain
 sim1d(scalDampHat, 5, scalMassHat, scalSpringHat, visSim=false, plotKE=true, scalVImpactHat=.3, scalGravityHat=0);
 
-scalMassHat = 20; % ratio of ball to chain
-scalSpringHat = 2; % ratio of ball to chain
-sim1d(scalDampHat, 10, scalMassHat, scalSpringHat, visSim=true, plotKE=true, scalVImpactHat=.01, scalGravityHat=0.01);
+scalMassHat = 5; % ratio of ball to chain
+scalSpringHat = 4; % ratio of ball to chain
+sim1d(scalDampHat, 24, scalMassHat, scalSpringHat, visSim=false, plotKE=true, scalVImpactHat=.4, scalGravityHat=0);
 
 
 %% double sweep
-NArr = 3:30;
+NArr = 18:45;
 scalDampHat = 0.005;
-scalMassHat = 20; % ball to chain
+scalMassHat = 5; % ball to chain
 % scalSpringHattArr = logspace(.6, 1.14, 10);  % high=red (high pressure), low=blue (low pressure)
-scalSpringHatArr = [ 2, 2.1, 2.3, 2.4, 2.5];
+scalSpringHatArr = [3.5,3.75 4,4.25];
 
 figure; hold on;
 t = linspace(1, 0, length(scalSpringHatArr))';
@@ -291,7 +291,7 @@ for j = 1:length(scalSpringHatArr)
     lambdas_measured = nan(size(NArr));
 
     for i = 1:length(NArr)
-        [ratios(i), lambdas_theory(i), lambdas_measured(i)] = sim1d(scalDampHat, NArr(i), scalMassHat, scalSpringHat, scalVImpactHat=.01, gravitHat=0);
+        [ratios(i), lambdas_theory(i), lambdas_measured(i)] = sim1d(scalDampHat, NArr(i), scalMassHat, scalSpringHat, scalVImpactHat=.4, scalGravityHat=0);
     end
 
     e = sqrt(max(ratios, 0));
