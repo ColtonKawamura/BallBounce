@@ -25,6 +25,8 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
         options.scalGravityHat     (1,1) double = .001
         options.scalVImpactHat     (1,1) double = 0.8
         options.scalDiamHat        (1,1) double = 1.0
+        options.scalLastContactTol   (1,1) double = 0.05   % in units of d_c
+        options.plotKE    (1,1) logical = false
     end
 
     %% GPU setup
@@ -74,7 +76,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
 
     % total simulation time ~ one round trip along the chain
     scalWavespeed = sqrt(scalSpringChain / scalMassChain) * scalDiamChain;
-    scalTimeTotal = 40 * scalNumPart * scalDiamChain / scalWavespeed;
+    scalTimeTotal = 10 * scalNumPart * scalDiamChain / scalWavespeed;
 
     % time step: fraction of ball period
     scalOmega     = scalNatFreqBall;
@@ -162,7 +164,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
         matAccelX(:, 1) = gather(vecAccelerationX_old);
     end
 
-    %% main time integration
+%% main time integration
 
     for step = 2:scalMaxTimeSteps
 
@@ -226,49 +228,54 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
         end
     end
 
-    %% analysis: restitution
-
-    vecBallVel = matVelX(1,:);
-    vecKE      = 0.5 * scalMassBall * vecBallVel.^2;
-
-    try
-        [vecPeakVals, vecPeakIdx] = findpeaks(vecKE);
-        scalKE_before = vecPeakVals(1);
-        scalKE_after  = vecPeakVals(2);
-    catch
-        scalKE_before = vecKE(1);
-        scalKE_after  = 0;
-    end
-    fprintf('[analysis] KE_before: %.4f\n', scalKE_before);
-    fprintf('[analysis] KE_after:  %.4f\n', scalKE_after);
-
-    scalRatioKE  = scalKE_after / scalKE_before;
-    scalV_before = sqrt(2*scalKE_before / scalMassBall);
-    scalV_after  = sqrt(2*scalKE_after  / scalMassBall);
-    fprintf('[analysis] e: %.4f\n', scalV_after/scalV_before);
-
-    %% contact time
+%% analysis: first contact
+%% analysis: first contact
 
     vecBallPosX      = matPosX(1,:);
     vecChainLeadPosX = matPosX(2,:);
-    inContact        = (vecChainLeadPosX - vecBallPosX) < scalDiamChain;
-    idxFirstContact  = find(inContact, 1, 'first');
 
-    vecBallVelWindow = vecBallVel(vecPeakIdx(1):end);
-    scalIdxCrossZero = find(diff(sign(vecBallVelWindow)) ~= 0, 1, 'first');
-    idxVelZero       = vecPeakIdx(1) + scalIdxCrossZero + 1;
+    % center–center distance between ball and first chain particle
+    vecDistBC = vecChainLeadPosX - vecBallPosX;      % units: diameters
 
-    if isempty(idxVelZero) || isempty(idxFirstContact)
-        scalTauContact = NaN;
-    else
-        scalTauContact = 0.5 * (vecTime(idxVelZero) - vecTime(idxFirstContact));
+    % strict contact (original criterion)
+    vecInContactStrict = vecDistBC < scalDiamChain;
+    idxFirstContact    = find(vecInContactStrict, 1, 'first');
+
+
+%% analysis: "last" contact
+
+
+    % tolerant contact: still "close" if within (d_c - tol)
+    scalLastContactTolAbs   = options.scalLastContactTol * scalDiamChain;
+    scalThreshLastContact   = scalDiamChain - scalLastContactTolAbs;
+
+    % ensure we actually have a first contact
+    if isempty(idxFirstContact)
+        warning('[contact] first contact not detected; using idxFirstContact = 1');
+        idxFirstContact = 1;
     end
-    fprintf('[analysis] tau_contact: %.4f\n', scalTauContact);
 
-    scalTauContactTheory = 0.5 * pi / sqrt(scalSpringBall / scalMassBall);
-    fprintf('[analysis] tau_theory:  %.4f\n', scalTauContactTheory);
+    % search only after first contact, in a relative window
+    vecDistBCAfter    = vecDistBC(idxFirstContact:end);
+    idxLastContactRel = find(vecDistBCAfter < scalThreshLastContact, 1, 'last');
 
-    %% measured wavespeed
+    if isempty(idxLastContactRel)
+        % no clear "last contact" within tolerance; fall back to first
+        warning('[last contact] no tolerant separation found; using first contact index');
+        idxLastContact = idxFirstContact;
+    else
+        % convert relative index back to absolute
+        idxLastContact = idxFirstContact - 1 + idxLastContactRel;
+    end
+
+    % clamp indices to valid range
+    idxFirstContact = max(1, min(idxFirstContact, numel(vecTime)));
+    idxLastContact  = max(1, min(idxLastContact,  numel(vecTime)));
+
+    scalTimeFirstContact = vecTime(idxFirstContact);
+    scalTimeLastContact  = vecTime(idxLastContact);
+
+%% index of when wave reaches back wall
 
     velSecondToLast = matVelX(scalNumPart-1, :);
     velBackground   = mean(abs(velSecondToLast(1:idxFirstContact-1)));
@@ -282,12 +289,88 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
         idxWaveArrival = idxFirstContact + idxWaveArrivalRel;
     end
 
-    scalLeg1 = vecTime(idxWaveArrival) - vecTime(idxFirstContact);
-    scalWaveSpeed_Measured = (scalNumPart-1)*scalDiamChain / scalLeg1;
+%% wave arrival top
+
+    scalTimeWaveArrivalBottom = vecTime(idxWaveArrival) - vecTime(idxFirstContact);
+
+
+%% measured wavespeed
+
+    scalWaveSpeed_Measured = (scalNumPart-1)*scalDiamChain / scalTimeWaveArrivalBottom;
     fprintf('[analysis] c_measured: %.4f\n', scalWaveSpeed_Measured);
 
     scalWaveSpeed_Theory = sqrt(scalSpringChain / scalMassChain) * scalDiamChain;
     fprintf('[analysis] c_theory:   %.4f\n', scalWaveSpeed_Theory);
+
+%% estimated time and index of wave arrival back at top
+
+    % time (relative to first contact) for the wave to go down and back up
+    scalTimeWaveReturnRel = 2 * scalTimeWaveArrivalBottom;
+
+    % absolute time when the reflected wave reaches the top
+    scalTimeWaveArrivalTop = vecTime(idxFirstContact) + scalTimeWaveReturnRel;
+
+    % corresponding index in vecTime
+    idxWaveArrivalTop = find(vecTime >= scalTimeWaveArrivalTop, 1, 'first');
+
+    if isempty(idxWaveArrivalTop)
+        % fallback: clamp to end of simulation
+        idxWaveArrivalTop   = numel(vecTime);
+        scalTimeWaveArrivalTop = vecTime(end);
+    end
+
+    fprintf('[analysis] t_wave_top: %.4f\n', scalTimeWaveArrivalTop);
+
+
+%% kintetic energy
+
+    vecBallVel = matVelX(1,:);
+    vecKE      = 0.5 * scalMassBall * vecBallVel.^2;
+
+    if options.plotKE
+
+        figure;
+        plot(vecTime, vecKE); hold on;
+        hold on
+
+        % markers for first and last contact
+        xline(vecTime(idxFirstContact), '--w', 'first', ...
+              'LabelVerticalAlignment','bottom');
+
+        xline(vecTime(idxLastContact), '--c', 'last', ...
+              'LabelVerticalAlignment','bottom');
+
+        xline(scalTimeWaveArrivalTop, '--m', 'wave top', ...
+              'LabelVerticalAlignment','bottom');
+    end
+
+%% kintetic energy before
+    scalV_before  = vecBallVel(idxFirstContact);
+    scalKE_before = 0.5 * scalMassBall * scalV_before^2;
+
+
+%% Kinetic engery after
+    % KE_after: velocity just after last contact
+    idxAfterContact = min(idxLastContact + 1, numel(vecBallVel));
+    scalV_after     = vecBallVel(idxAfterContact);
+    scalKE_after    = 0.5 * scalMassBall * scalV_after^2;
+
+    fprintf('[analysis] KE_before: %.4f\n', scalKE_before);
+    fprintf('[analysis] KE_after:  %.4f\n', scalKE_after);
+
+    scalRatioKE = scalKE_after / scalKE_before;
+
+%% contact time measured (first to last contact)
+
+    if isempty(idxFirstContact) || isempty(idxLastContact)
+        scalTauContact = NaN;
+    else
+        scalTauContact = .25*(vecTime(idxLastContact) - vecTime(idxFirstContact));
+    end
+    fprintf('[analysis] tau_contact: %.4f\n', scalTauContact);
+
+    scalTauContactTheory = 0.5 * pi / sqrt(scalSpringBall / scalMassBall);
+    fprintf('[analysis] tau_theory:  %.4f\n', scalTauContactTheory);
 
 %% lambda
     scalLambdaTheory = 2*(scalNumPart-1)*scalDiamChain / (scalNatFreqChain*scalDiamChain*scalTauContactTheory);
@@ -296,24 +379,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
     scalLambda_Measured = 2*(scalNumPart-1)*scalDiamChain / (scalWaveSpeed_Measured.*scalTauContact);
     fprintf('[analysis] Lambda_measured: %.4f\n', scalLambda_Measured);
 
-    %% plotting
 
-    if options.visSim
-        figure;
-        plot(vecTime, vecKE); hold on;
-        plot(vecTime(vecPeakIdx(1)), vecPeakVals(1), 'rv', 'MarkerFaceColor','r', 'MarkerSize', 10);
-        if length(vecPeakIdx) > 1
-            plot(vecTime(vecPeakIdx(2)), vecPeakVals(2), 'gv', 'MarkerFaceColor','g', 'MarkerSize', 10);
-        end
-        legend('KE', '$K_{\mathrm{before}}$', '$K_{\mathrm{after}}$', 'Interpreter','LaTeX');
-        xlabel('time', 'Interpreter', 'LaTeX', 'FontSize', 20);
-        ylabel('$K_{\mathrm{particle\ 1}}$', 'Interpreter', 'LaTeX', 'FontSize', 20);
-        xline(vecTime(idxFirstContact), '--w', 'contact', 'LabelVerticalAlignment','bottom');
-        if idxVelZero ~= 0
-            xline(vecTime(idxVelZero), '--y', 'vel = 0', 'LabelVerticalAlignment','bottom');
-        end
-        grid on;
-    end
 
     %% nested force law (contact springs)
     function vecForce = forceLaw(vecPosX_loc, vecSour_loc, vecDest_loc, vecDistRest_loc, vecSpringConst_loc)
