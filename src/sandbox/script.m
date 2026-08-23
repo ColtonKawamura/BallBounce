@@ -1,15 +1,37 @@
-%% single
-scalDampHat = 0.015
-scalMassHat = 1; % ratio of ball to chain
-scalSpringHat = 2.5; % ratio of ball to chain
-sim1d(scalDampHat, 20, scalMassHat, scalSpringHat, visSim=true, plotKE=true, scalVImpactHat=.4, scalGravityHat=0);
+%%  goood
+scalDampHat = 0.01;
+scalMassHat = 20; % ball-to-chain: if too low, contact time too short
+scalSpringHat = 2; % ball-to-chain: if too low, wave doesn't reach bottom
+scalVImpactHat = 0.2; % increases contact time
+sim1d(scalDampHat, 10, scalMassHat, scalSpringHat, visSim=true, plotKE=true, scalVImpactHat=scalVImpactHat, scalGravityHat=0);
+
+%%  wave almost matching, but single round trip
+scalDampHat = 0.001;
+scalMassHat = 1.1; % ball-to-chain: if too low, contact time too short
+scalSpringHat = .009; % ball-to-chain: if too low, wave doesn't reach bottom
+scalVImpactHat = 0.06; % increases contact time
+sim1d(scalDampHat, 7, scalMassHat, scalSpringHat, visSim=true, plotKE=true, scalVImpactHat=scalVImpactHat, scalGravityHat=0);
+
+%%  goood
+scalDampHat = 0.0;
+scalMassHat = 1.1; % ball-to-chain: if too low, contact time too short
+scalSpringHat = .008; % ball-to-chain: if too low, wave doesn't reach bottom
+scalVImpactHat = 0.06; % increases contact time
+sim1d(scalDampHat, 7, scalMassHat, scalSpringHat, visSim=true, plotKE=true, scalVImpactHat=scalVImpactHat, scalGravityHat=0);
+
+%% good bounce but wave too slow
+scalDampHat = 0.0016;
+scalMassHat = .3; % ball-to-chain: if too low, contact time too short
+scalSpringHat = .03; % ball-to-chain: if too low, wave doesn't reach bottom
+scalVImpactHat = 0.15; % impact velocities
+sim1d(scalDampHat, 6, scalMassHat, scalSpringHat, visSim=true, plotKE=true, scalVImpactHat=scalVImpactHat, scalGravityHat=0);
 
 %%
-NArr           = 2:30;
+NArr           = 3:30;
 vecDampHat     = [0.016, .015];
 vecMassHat     = [1];               % ball-to-chain mass ratios
-vecVImpactHat  = [0.4];           % impact velocities
-vecSpringHat   = [2.5,3, 3.5, 5,5.5, 6, 10];
+vecVImpactHat  = [0.2];           % impact velocities
+vecSpringHat   = [1];
 
 scalGravityHat = 0;
 

@@ -1,9 +1,8 @@
 NArr           = 3:30;
-vecDampHat     = [0.016, .015];
-vecMassHat     = [1];               % ball-to-chain mass ratios
+vecDampHat     = [0.0001];
+vecMassHat     = [20];               % ball-to-chain mass ratios
 vecVImpactHat  = [0.2];           % impact velocities
-vecSpringHat   = [1];
-
+vecSpringHat   = [2];
 scalGravityHat = 0;
 
 % --- single switch: choose which parameter controls dotted vs solid ---

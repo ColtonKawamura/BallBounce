@@ -25,7 +25,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
         options.scalGravityHat     (1,1) double = .001
         options.scalVImpactHat     (1,1) double = 0.8
         options.scalDiamHat        (1,1) double = 1.0
-        options.scalLastContactTol   (1,1) double = 0.05   % in units of d_c
+        options.scalLastContactTol   (1,1) double = 0   % in units of d_c
         options.plotKE    (1,1) logical = false
     end
 
@@ -78,7 +78,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
 
     % total simulation time ~ one round trip along the chain
     scalWavespeed = sqrt(scalSpringChain / scalMassChain) * scalDiamChain;
-    scalTimeTotal = 10 * scalNumPart * scalDiamChain / scalWavespeed;
+    scalTimeTotal = 20 * scalNumPart * scalDiamChain / scalWavespeed;
 
     % time step: fraction of ball period
     scalOmega     = scalNatFreqBall;
@@ -170,7 +170,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
     velBackgroundLoop     = NaN;    % background |v_{N-1}| before contact
     flagWaveReachedBottom = false;  % has the wave reached the bottom yet?
     idxWaveArrivalLoop    = [];     % index when wave first hits bottom
-    threshOffset          = 5e-2;   % same +1e-4 as in analysis
+    threshOffset          = 1e-3;   % same +1e-4 as in analysis
     flagLostContact = false;    % has the ball lost contact with the chain yet?
     hadContact      = false;    % has contact ever occurred?
     idxWaveArrivalTopPred = Inf;
