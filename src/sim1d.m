@@ -38,11 +38,14 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
         fprintf('[sim] No GPU found — running on CPU.\n');
     end
 
+    fprintf('[sim1d] Running simulation with %d particles, %d damping, %d massHat,  %d springHat %d scvHat\n', ...
+        scalNumPart, scalDampHat, scalMassHat, scalSpringHat, options.scalVImpactHat);
+
     savePosVel = true;
 
     if options.visSim
         figVis = figure('Name', '1D Simulation');
-        gifPath = fullfile('~/Desktop/', 'sim1d.gif');
+        % gifPath = fullfile('~/Desktop/', 'sim1d.gif');
     end
 
     %% physical constant calculations (dimensionless hats, chain-based)
@@ -59,7 +62,6 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
     % so in these units:
     %   m_b* = scalMassHat,   m_c* = 1
     %   k_b* = scalSpringHat, k_c* = 1
-    scalDiamBall   = scalDiamChain* options.scalDiamHat;
     scalMassBall   = scalMassHat   * scalMassChain;
     scalSpringBall = scalSpringHat * scalSpringChain;
 
@@ -96,7 +98,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
     fprintf('[params] v_hat * dt / d_c = %.3f (diameters per step)\n', scalStepDisp);
 
     if scalStepDisp > 0.2
-        warning(['[sim] Impact displacement per step is %.2f diameters (v_hat dt / d_c). ' ...
+        error(['[sim] Impact displacement per step is %.2f diameters (v_hat dt / d_c). ' ...
                  'Reduce scalTimeStep or scalVImpact.'], ...
                  scalStepDisp);
     end
@@ -144,7 +146,6 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
 
     % zero velocities/accelerations, then set impact velocity of ball
     vecVelocityX(:)        = 0;
-    vecAccelerationX(:)    = 0;
     vecAccelerationX_old(:)= 0;
     vecVelocityX(1)        = scalVImpact;
 
@@ -273,6 +274,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
 
 
             axis equal;
+            grid on;
             drawnow;
 
         end
@@ -318,33 +320,17 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
     idxFirstContact = max(1, min(idxFirstContact, numel(vecTime)));
     idxLastContact  = max(1, min(idxLastContact,  numel(vecTime)));
 
-    scalTimeFirstContact = vecTime(idxFirstContact);
-    scalTimeLastContact  = vecTime(idxLastContact);
-
-%% index of when wave reaches back wall
-
-    velSecondToLast = matVelX(scalNumPart-1, :);
-    velBackground   = mean(abs(velSecondToLast(1:idxFirstContact-1)));
-
-    if ~isempty(idxWaveArrivalLoop)
-        % use index detected during integration (same criterion)
-        idxWaveArrival = idxWaveArrivalLoop;
-    else
-        % fallback: detect from history, as before
-        idxWaveArrivalRel = find(abs(velSecondToLast(idxFirstContact+1:end)) ...
-                                 > velBackground + 1e-4, 1, 'first');
-        if isempty(idxWaveArrivalRel)
-            warning('idxWaveArrival did not detect wave hitting bottom');
-            idxWaveArrival = length(vecTime);
-        else
-            idxWaveArrival = idxFirstContact + idxWaveArrivalRel;
-        end
-    end
-
 
 %% wave arrival bottom & top (use loop indices)
 
     % bottom arrival time: use the loop-detected index
+    if flagWaveReachedBottom == false
+        warning("Did not detect wave reaching bottom.");
+        scalRatioKE = NaN;
+        scalLambdaTheory = NaN;
+        scalLambda_Measured = NaN;
+        return
+    end
     scalTimeWaveArrivalBottom = vecTime(idxWaveArrivalLoop) - vecTime(idxFirstContactLoop);
 
 %% measured wavespeed
@@ -360,9 +346,6 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
     % use the predicted top-arrival index from the loop (same as yellow marker)
     idxWaveArrivalTop      = idxWaveArrivalTopPred;
     scalTimeWaveArrivalTop = vecTime(idxWaveArrivalTop);
-
-    % relative return time (down + up) as actually used in the loop
-    scalTimeWaveReturnRel  = scalTimeWaveArrivalTop - vecTime(idxFirstContactLoop);
 
     fprintf('[analysis] t_wave_top: %.4f\n', scalTimeWaveArrivalTop);
 
