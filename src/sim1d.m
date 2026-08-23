@@ -19,13 +19,12 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
         scalNumPart          (1,1) double
         scalMassHat          (1,1) double  % m_b/m_c
         scalSpringHat        (1,1) double  % k_b/k_c
-        options.scalDampHatBall   (1,1) double = 1e-5
+        options.scalDampHatBall   (1,1) double = scalDampHat
         options.visSim             (1,1) logical = false
         options.scalPressure       (1,1) double = 0.0
         options.scalGravityHat     (1,1) double = .001
         options.scalVImpactHat     (1,1) double = 0.8
         options.scalDiamHat        (1,1) double = 1.0
-        options.scalLastContactTol   (1,1) double = 0   % in units of d_c
         options.plotKE    (1,1) logical = false
     end
 
@@ -175,6 +174,8 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
     hadContact      = false;    % has contact ever occurred?
     idxWaveArrivalTopPred = Inf;
     idxLastContactLoop = []; % index of last contact during integration
+    scalLostContactTol = 0.15;                  % extra gap in units of d_c
+    scalLostContactThresh = scalDiamChain + scalLostContactTol;
 
 %% main time integration
 
@@ -238,12 +239,21 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
             end
         end
 
-        % --- contact / loss-of-contact tracking ---
+        % --- contact / loss-of-contact tracking with tolerant separation ---
+        % center–center distance between ball (1) and first chain particle (2)
+        distBC = vecPosX(2) - vecPosX(1);
+
         if inContactNow
+            % we are in geometric contact
             hadContact = true;
         elseif hadContact && ~flagLostContact
-            idxLastContactLoop = step;
-            flagLostContact = true;   % first time we lose contact after having contact
+            % we have had contact before; check if we are *really* separated
+            if distBC > scalLostContactThresh
+                idxLastContactLoop = step;
+                flagLostContact    = true;   % first time we lose contact after having contact
+            end
+            % if distBC <= scalLostContactThresh, we stay in a "near-contact" regime
+            % and do not mark loss of contact yet
         end
 
         if options.visSim && mod(step, scalVisInterval) == 0

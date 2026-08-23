@@ -1,8 +1,15 @@
-%%  goood
-scalDampHat = 0.01;
+%%  
+scalDampHat = .002;
 scalMassHat = 20; % ball-to-chain: if too low, contact time too short
-scalSpringHat = 2; % ball-to-chain: if too low, wave doesn't reach bottom
-scalVImpactHat = 0.2; % increases contact time
+scalSpringHat = 2.5; % ball-to-chain: if too low, wave doesn't reach bottom
+scalVImpactHat = 0.1; % increases contact time
+sim1d(scalDampHat, 12, scalMassHat, scalSpringHat, visSim=true, plotKE=true, scalVImpactHat=scalVImpactHat, scalGravityHat=0);
+
+%%  
+scalDampHat = .005;
+scalMassHat = 20; % ball-to-chain: if too low, contact time too short
+scalSpringHat = 1.5; % ball-to-chain: if too low, wave doesn't reach bottom
+scalVImpactHat = 0.1; % increases contact time
 sim1d(scalDampHat, 10, scalMassHat, scalSpringHat, visSim=true, plotKE=true, scalVImpactHat=scalVImpactHat, scalGravityHat=0);
 
 %%  wave almost matching, but single round trip
