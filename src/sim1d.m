@@ -169,13 +169,14 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
     velBackgroundLoop     = NaN;    % background |v_{N-1}| before contact
     flagWaveReachedBottom = false;  % has the wave reached the bottom yet?
     idxWaveArrivalLoop    = [];     % index when wave first hits bottom
-    threshOffset          = 1e-3;   % same +1e-4 as in analysis
+    scalBottomArrivalThresh          = 1e-3;   % same +1e-4 as in analysis
     flagLostContact = false;    % has the ball lost contact with the chain yet?
     hadContact      = false;    % has contact ever occurred?
     idxWaveArrivalTopPred = Inf;
     idxLastContactLoop = []; % index of last contact during integration
     scalLostContactTol = 0.15;                  % extra gap in units of d_c
     scalLostContactThresh = scalDiamChain + scalLostContactTol;
+    scalOverlapBottomTol = 5e-2 * scalDiamChain;
 
 %% main time integration
 
@@ -231,8 +232,20 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
         end
 
         % --- wave arrival at bottom: SAME criterion as analysis ---
-        if ~flagWaveReachedBottom && ~isnan(velBackgroundLoop)
-            if abs(gather(vecVelocityX(scalNumPart-1))) > velBackgroundLoop + threshOffset
+        % if ~flagWaveReachedBottom && ~isnan(velBackgroundLoop)
+        %     if abs(gather(vecVelocityX(scalNumPart-1))) > velBackgroundLoop + scalBottomArrivalThresh
+        %         flagWaveReachedBottom = true;
+        %         idxWaveArrivalLoop    = step;  % store index for analysis
+        %         idxWaveArrivalTopPred = idxFirstContactLoop + 2*(idxWaveArrivalLoop - idxFirstContactLoop);
+        %     end
+        % end
+        % --- wave arrival at bottom: overlap-based criterion ---
+        if ~flagWaveReachedBottom && ~isempty(idxFirstContactLoop) && step >= idxFirstContactLoop
+            % center–center distance between second-to-last and last particle
+            distBottom    = vecPosX(scalNumPart) - vecPosX(scalNumPart-1);
+            overlapBottom = scalDiamChain - abs(distBottom);   % > 0 means geometric overlap
+
+            if overlapBottom > scalOverlapBottomTol
                 flagWaveReachedBottom = true;
                 idxWaveArrivalLoop    = step;  % store index for analysis
                 idxWaveArrivalTopPred = idxFirstContactLoop + 2*(idxWaveArrivalLoop - idxFirstContactLoop);
