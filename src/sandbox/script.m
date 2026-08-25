@@ -1,9 +1,9 @@
 %%  
-scalDampHat = .001;
+scalDampHat = .00065;
 scalMassHat = 20; % ball-to-chain: if too low, contact time too short
 scalSpringHat = 2.5; % ball-to-chain: if too low, wave doesn't reach bottom
 scalVImpactHat = 0.1; % increases contact time
-sim1d(scalDampHat, 15, scalMassHat, scalSpringHat, visSim=true, plotKE=true, scalVImpactHat=scalVImpactHat, scalGravityHat=0);
+sim1d(scalDampHat, 5, scalMassHat, scalSpringHat, visSim=true, plotKE=true, scalVImpactHat=scalVImpactHat, scalGravityHat=0);
 
 %%  
 scalDampHat = .005;

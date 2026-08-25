@@ -77,7 +77,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
 
     % total simulation time ~ one round trip along the chain
     scalWavespeed = sqrt(scalSpringChain / scalMassChain) * scalDiamChain;
-    scalTimeTotal = 20 * scalNumPart * scalDiamChain / scalWavespeed;
+    scalTimeTotal = 16 * scalNumPart * scalDiamChain / scalWavespeed;
 
     % time step: fraction of ball period
     scalOmega     = scalNatFreqBall;

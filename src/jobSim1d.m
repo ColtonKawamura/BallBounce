@@ -1,10 +1,12 @@
-NArr           = 3:22;
+NArr           = 3:100;
 vecDampHat     = [0.0006, .0023];
 vecMassHat     = [20];               % ball-to-chain mass ratios
 vecVImpactHat  = [0.1];           % impact velocities
 % vecSpringHat   = [1, 1.25, 1.5, 2.5, 3, 3.5, 3.7];
 vecSpringHat   = [1, 2.5];
 scalGravityHat = 0;
+% vecDampHat = .005./(.5*sqrt(vecSpringHat * 1))
+
 
 % --- single switch: choose which parameter controls dotted vs solid ---
 scalDottedBy = "mass";    % set to "mass" or "v"
