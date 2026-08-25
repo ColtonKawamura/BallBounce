@@ -45,7 +45,33 @@ We get the following curves:
 
 The actual visualization of the simulations are shown in the following video.
 
+- **White circles**  
+  Default state for all particles: no special event has occurred yet.
+
+- **Yellow circle (particle 2, just below the ball)**  
+  Turns yellow when the **reflected wave is predicted to arrive back at the top** of the stack (based on the measured travel time to the bottom). This highlights the moment when energy carried by the wave reaches the upper contact again.
+
+- **Red circle (bottom particle)**  
+  Turns red once the **wave first reaches and compresses the bottom contact**. This marks the moment the initial impact pulse has traversed the entire stack.
+
+- **Cyan circle (ball)**  
+  The ball turns cyan after it has **lost contact with the stack** (gap larger than one diameter plus a small tolerance). This visually marks the onset of rebound / free flight.
+
 https://github.com/user-attachments/assets/db07f7d6-c86a-4d45-a3be-91061ca162a0
+
+# Pressure Effect
+
+Decreasing pressure effectively decreases spring constant of the paper-air cell. Because effective damping and spring constant are coupled
+
+$$
+\hat{\gamma} = \frac{\gamma}{\sqrt{k_c\, m_c}}
+$$
+
+decreasing $k_c$ would also cause a decrease in $\hat{g}$. Plotting this explicit, we see,
+
+<img width="693" height="926" alt="image" src="https://github.com/user-attachments/assets/cac70222-5204-4038-a43f-682acd66ee27" />
+
+this causes a shift in peak to lower $N$ as well as decreasing overall restitution. 
 
 
 
