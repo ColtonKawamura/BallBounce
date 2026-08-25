@@ -1,4 +1,4 @@
-NArr           = 3:24;
+NArr           = 3:22;
 vecDampHat     = [0.0006, .0023];
 vecMassHat     = [20];               % ball-to-chain mass ratios
 vecVImpactHat  = [0.1];           % impact velocities
