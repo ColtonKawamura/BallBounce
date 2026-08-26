@@ -77,7 +77,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
 
     % total simulation time ~ one round trip along the chain
     scalWavespeed = sqrt(scalSpringChain / scalMassChain) * scalDiamChain;
-    scalTimeTotal = 16 * scalNumPart * scalDiamChain / scalWavespeed;
+    scalTimeTotal = 50 * scalNumPart * scalDiamChain / scalWavespeed;
 
     % time step: fraction of ball period
     scalOmega     = scalNatFreqBall;
@@ -174,7 +174,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
     hadContact      = false;    % has contact ever occurred?
     idxWaveArrivalTopPred = Inf;
     idxLastContactLoop = []; % index of last contact during integration
-    scalLostContactTol = 0.15;                  % extra gap in units of d_c
+    scalLostContactTol = 0.9;                  % extra gap in units of d_c
     scalLostContactThresh = scalDiamChain + scalLostContactTol;
     scalOverlapBottomTol = 5e-2 * scalDiamChain;
 
@@ -392,6 +392,7 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
 
         xline(scalTimeWaveArrivalTop, '--m', 'wave top', ...
               'LabelVerticalAlignment','bottom');
+        title('$$', 'Interpreter', 'latex', 'FontSize', 20);
     end
 
 %% kintetic energy before
