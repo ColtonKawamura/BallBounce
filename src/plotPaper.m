@@ -1,4 +1,4 @@
-mainTwo = false;
+mainTwo = true;
 % Full script: sweep over (spring, damping) pairs and plot e(N)
 
 if mainTwo == true
@@ -73,6 +73,7 @@ if mainTwo == true
                 e = sqrt(max(ratios, 0));
                 e(ratios <= .2) = NaN;
 
+                % DATA LINES ONLY (tagged)
                 semilogx(NArr, e, ...
                     'LineWidth', 1.5, ...
                     'Color', colors(idxPair,:), ...
@@ -80,7 +81,8 @@ if mainTwo == true
                     'MarkerSize', vecMarkerSize(idxPair), ...
                     'LineStyle', scalLineStyle{1}, ...
                     'DisplayName', sprintf('$\\hat{k}=%.2f,\\ \\hat{\\gamma}=%.3f$', ...
-                                           scalSpringHat, scalDampHat));
+                                           scalSpringHat, scalDampHat), ...
+                    'Tag', 'dataLine');   % <-- tag so inset can select only data
             end
         end
     end
@@ -99,6 +101,31 @@ if mainTwo == true
     grid on;
     xscale(gca, 'log');
     box on;
+
+    % --- HARD-CODED VERTICAL DOTTED LINES AND ARROW ON MAIN AXES ---
+    % vertical dotted lines at x = 10 and x = 12
+    xline(10, 'LineStyle', ':', 'Color', [0.8 0.2 0.2], 'LineWidth', 1.5);
+    xline(12, 'LineStyle', ':', 'Color', [0.2 0.2 0.8], 'LineWidth', 1.5);
+
+    % fixed y-position for the horizontal arrow line (fits in [0.76, 0.92])
+    yArrow = 0.90;
+
+    % horizontal line between x = 10 and x = 12
+    line([10 12], [yArrow yArrow], ...
+         'Color', [0.3 0.3 0.3], 'LineStyle', '-', 'LineWidth', 1.5);
+
+    % center of the arrow text in log-x coordinates (geometric mean)
+    xCenter = sqrt(10 * 12);
+
+    % text with left-pointing arrow
+    text(xCenter, yArrow + 0.01, ...
+         '$\leftarrow$ predicted shift of $N_c$', ...
+         'Interpreter', 'latex', ...
+         'HorizontalAlignment', 'center', ...
+         'Color', [0.2 0.2 0.2], ...
+         'FontSize', 14);
+    % --- END ANNOTATION BLOCK ---
+
     % --- inset zoom: N in [8,16], e in [0.8,0.92] ---
     mainAx  = gca;
 
@@ -106,8 +133,8 @@ if mainTwo == true
     insetAx = axes('Position', [0.58 0.61 0.28 0.28]);
     box(insetAx, 'on'); hold(insetAx, 'on');
 
-    % copy all line objects from the main axes into the inset
-    hLines = findobj(mainAx, 'Type', 'line');
+    % copy ONLY data lines (tagged 'dataLine') from the main axes into the inset
+    hLines = findobj(mainAx, 'Type', 'line', '-and', 'Tag', 'dataLine');
     copyobj(hLines, insetAx);
 
     % keep semilog x-scale and zoom into desired region
@@ -201,7 +228,8 @@ else
                     'MarkerSize', vecMarkerSize(idxPair), ...
                     'LineStyle', scalLineStyle{1}, ...
                     'DisplayName', sprintf('$\\hat{k}=%.2f,\\ \\hat{\\gamma}=%.3f$', ...
-                                           scalSpringHat, scalDampHat));
+                                           scalSpringHat, scalDampHat), ...
+                    'Tag', 'dataLine');   % <--- added tag
             end
         end
     end
@@ -228,7 +256,8 @@ else
     box(insetAx, 'on'); hold(insetAx, 'on');
 
     % copy all line objects from the main axes into the inset
-    hLines = findobj(mainAx, 'Type', 'line');
+    % copy only data lines (tagged 'dataLine') from the main axes into the inset
+    hLines = findobj(mainAx, 'Type', 'line', '-and', 'Tag', 'dataLine');
     copyobj(hLines, insetAx);
 
     % keep semilog x-scale and zoom into desired region
