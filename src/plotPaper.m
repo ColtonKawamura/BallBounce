@@ -43,7 +43,13 @@ if mainTwo == true
     vecLineStyleV    = repmat({"-"}, size(vecVImpactHat));  % default solid
     vecLineStyleV(2:end)    = {":"};                        % second/others dotted
 
+    % ===== MAIN PLOT: ONLY PAIRS 2 AND 3 =====
     for idxPair = 1:numPairs
+        % skip pairs 1 and 4 on the main axes
+        if ~(idxPair == 2 || idxPair == 3)
+            continue;
+        end
+
         scalSpringHat = matSpringDampHat(idxPair, 1);
         scalDampHat   = matSpringDampHat(idxPair, 2);
 
@@ -73,28 +79,44 @@ if mainTwo == true
                 e = sqrt(max(ratios, 0));
                 e(ratios <= .2) = NaN;
 
-                % DATA LINES ONLY (tagged)
                 semilogx(NArr, e, ...
                     'LineWidth', 1.5, ...
                     'Color', colors(idxPair,:), ...
                     'Marker', 'o', ...
                     'MarkerSize', vecMarkerSize(idxPair), ...
-                    'LineStyle', scalLineStyle{1}, ...
-                    'DisplayName', sprintf('$\\hat{k}=%.2f,\\ \\hat{\\gamma}=%.3f$', ...
-                                           scalSpringHat, scalDampHat), ...
-                    'Tag', 'dataLine');   % <-- tag so inset can select only data
+                    'LineStyle', scalLineStyle{1});
             end
         end
     end
+    % ========================================
 
     xlabel('$N$', 'Interpreter', 'latex', 'FontSize', 20);
     ylabel('$e$', 'Interpreter', 'latex', 'FontSize', 20);
 
-    legend('show', ...
+    % ===== LEGEND: USE DUMMY NaN LINES FOR ALL FOUR PAIRS =====
+    hLeg = gobjects(numPairs,1);
+    legendLabels = cell(numPairs,1);
+
+    for idxPair = 1:numPairs
+        legendLabels{idxPair} = sprintf('$\\hat{k}=%.2f,\\ \\hat{\\gamma}=%.3f$', ...
+                                        matSpringDampHat(idxPair,1), matSpringDampHat(idxPair,2));
+
+        % dummy line: NaN data so nothing is drawn, but style shows in legend
+        hLeg(idxPair) = semilogx(NArr, nan(size(NArr)), ...
+            'LineWidth', 1.5, ...
+            'Color', colors(idxPair,:), ...
+            'Marker', 'o', ...
+            'MarkerSize', vecMarkerSize(idxPair), ...
+            'LineStyle', '-');
+    end
+
+    lgd = legend(hLeg, legendLabels, ...
            'Location', 'best', ...
            'Interpreter', 'latex', ...
            'FontSize', 13, ...
            'NumColumns', 1);
+    lgd.AutoUpdate = 'off';
+    % ========================================
 
     xlim([6, 25]);
     ylim([.76, .92]);
@@ -103,54 +125,50 @@ if mainTwo == true
     box on;
 
     % --- HARD-CODED VERTICAL DOTTED LINES AND ARROW ON MAIN AXES ---
-    % vertical dotted lines at x = 10 and x = 12
-    % xline(10, 'LineStyle', ':', 'Color', [0.8 0.2 0.2], 'LineWidth', 1.5);
-    % xline(12, 'LineStyle', ':', 'Color', [0.2 0.2 0.8], 'LineWidth', 1.5);
-    xline(10, 'LineStyle', ':', 'Color', [0.3 0.3 0.3], 'LineWidth', 1.5);  % dark gray
-    xline(10, 'LineStyle', ':', 'Color', [0.8 0.8 0.8], 'LineWidth', 1.5);  % light gray
+    % vertical dotted lines at x = 10 and x = 12 (gray)
+    hX1 = xline(10, 'LineStyle', ':', 'Color', [0.3 0.3 0.3], 'LineWidth', 1.5);
+    hX2 = xline(12, 'LineStyle', ':', 'Color', [0.3 0.3 0.3], 'LineWidth', 1.5);
+
+    % remove vertical lines from legend
+    hX1.Annotation.LegendInformation.IconDisplayStyle = 'off';
+    hX2.Annotation.LegendInformation.IconDisplayStyle = 'off';
 
     % fixed y-position for the horizontal arrow line (fits in [0.76, 0.92])
     yArrow = 0.90;
 
-    % horizontal line between x = 10 and x = 12
-    % line([10 12], [yArrow yArrow], ...
-    %      'Color', [0.3 0.3 0.3], 'LineStyle', '-', 'LineWidth', 1.5);
-    % arrow from x = 12 to x = 10 (pointing left)
-    % arrow from x = 12 to x = 10 (pointing left), with a bigger head
     % --- custom left-pointing arrow from x = 12 to x = 10 ---
-xTail  = 12;           % where shaft starts (right)
-xTip   = 10;           % arrow tip (left)
-yArrow = 0.90;         % already defined above
+    xTail  = 12;           % where shaft starts (right)
+    xTip   = 10;           % arrow tip (left)
+    shaftEnd   = xTip + 0.3;   % where shaft meets head
+    shaftColor = [0.3 0.3 0.3];
 
-shaftEnd   = xTip + 0.3;   % where shaft meets head (leave 0.3 in N for head)
-shaftColor = [0.3 0.3 0.3];
+    % shaft (horizontal line)
+    hShaft = line([xTail shaftEnd], [yArrow yArrow], ...
+                  'Color', shaftColor, 'LineStyle', '-', 'LineWidth', 1.5);
 
-% shaft (horizontal line)
-line([xTail shaftEnd], [yArrow yArrow], ...
-     'Color', shaftColor, 'LineStyle', '-', 'LineWidth', 1.5);
+    % triangular head
+    headWidth  = 0.1;      % extent in x
+    headHeight = 0.003;    % extent in y
+    xHead = [shaftEnd, shaftEnd, xTip];
+    yHead = [yArrow - headHeight, yArrow + headHeight, yArrow];
 
-% triangular head
-headWidth  = 0.1;      % extent in x
-headHeight = 0.003;    % extent in y
+    hHead = patch(xHead, yHead, shaftColor, ...
+                  'EdgeColor', shaftColor);
 
-xHead = [shaftEnd, shaftEnd, xTip];
-yHead = [yArrow - headHeight, yArrow + headHeight, yArrow];
-
-patch(xHead, yHead, shaftColor, ...
-      'EdgeColor', shaftColor);
-% --- end custom arrow ---
+    % remove arrow shaft and head from legend
+    hShaft.Annotation.LegendInformation.IconDisplayStyle = 'off';
+    hHead.Annotation.LegendInformation.IconDisplayStyle  = 'off';
 
     % center of the arrow text in log-x coordinates (geometric mean)
     xCenter = sqrt(10 * 12);
 
-    % text with left-pointing arrow
+    % text label
     text(xCenter, yArrow + 0.01, ...
          '$N_c$ shift', ...
          'Interpreter', 'latex', ...
          'HorizontalAlignment', 'center', ...
          'Color', [0.2 0.2 0.2], ...
          'FontSize', 14);
-    % --- END ANNOTATION BLOCK ---
 
     % --- inset zoom: N in [8,16], e in [0.8,0.92] ---
     mainAx  = gca;
@@ -159,9 +177,46 @@ patch(xHead, yHead, shaftColor, ...
     insetAx = axes('Position', [0.58 0.61 0.28 0.28]);
     box(insetAx, 'on'); hold(insetAx, 'on');
 
-    % copy ONLY data lines (tagged 'dataLine') from the main axes into the inset
-    hLines = findobj(mainAx, 'Type', 'line', '-and', 'Tag', 'dataLine');
-    copyobj(hLines, insetAx);
+    % ===== INSET: PLOT ALL FOUR LINES SEPARATELY =====
+    for idxPair = 1:numPairs
+        scalSpringHat = matSpringDampHat(idxPair, 1);
+        scalDampHat   = matSpringDampHat(idxPair, 2);
+
+        for idxMass = 1:length(vecMassHat)
+            scalMassHat = vecMassHat(idxMass);
+
+            for idxV = 1:length(vecVImpactHat)
+                scalVImpactHat = vecVImpactHat(idxV);
+
+                if scalDottedBy == "mass"
+                    scalLineStyle = vecLineStyleMass(idxMass);
+                else
+                    scalLineStyle = vecLineStyleV(idxV);
+                end
+
+                ratios           = nan(size(NArr));
+                lambdas_theory   = nan(size(NArr));
+                lambdas_measured = nan(size(NArr));
+
+                for idxN = 1:length(NArr)
+                    [ratios(idxN), lambdas_theory(idxN), lambdas_measured(idxN)] = ...
+                        sim1d(scalDampHat, NArr(idxN), scalMassHat, scalSpringHat, ...
+                              scalVImpactHat=scalVImpactHat, scalGravityHat=scalGravityHat);
+                end
+
+                e = sqrt(max(ratios, 0));
+                e(ratios <= .2) = NaN;
+
+                semilogx(insetAx, NArr, e, ...
+                    'LineWidth', 1.5, ...
+                    'Color', colors(idxPair,:), ...
+                    'Marker', 'o', ...
+                    'MarkerSize', vecMarkerSize(idxPair), ...
+                    'LineStyle', scalLineStyle{1});
+            end
+        end
+    end
+    % ================================================
 
     % keep semilog x-scale and zoom into desired region
     set(insetAx, 'XScale', 'log');
