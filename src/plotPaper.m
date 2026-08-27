@@ -104,22 +104,48 @@ if mainTwo == true
 
     % --- HARD-CODED VERTICAL DOTTED LINES AND ARROW ON MAIN AXES ---
     % vertical dotted lines at x = 10 and x = 12
-    xline(10, 'LineStyle', ':', 'Color', [0.8 0.2 0.2], 'LineWidth', 1.5);
-    xline(12, 'LineStyle', ':', 'Color', [0.2 0.2 0.8], 'LineWidth', 1.5);
+    % xline(10, 'LineStyle', ':', 'Color', [0.8 0.2 0.2], 'LineWidth', 1.5);
+    % xline(12, 'LineStyle', ':', 'Color', [0.2 0.2 0.8], 'LineWidth', 1.5);
+    xline(10, 'LineStyle', ':', 'Color', [0.3 0.3 0.3], 'LineWidth', 1.5);  % dark gray
+    xline(10, 'LineStyle', ':', 'Color', [0.8 0.8 0.8], 'LineWidth', 1.5);  % light gray
 
     % fixed y-position for the horizontal arrow line (fits in [0.76, 0.92])
     yArrow = 0.90;
 
     % horizontal line between x = 10 and x = 12
-    line([10 12], [yArrow yArrow], ...
-         'Color', [0.3 0.3 0.3], 'LineStyle', '-', 'LineWidth', 1.5);
+    % line([10 12], [yArrow yArrow], ...
+    %      'Color', [0.3 0.3 0.3], 'LineStyle', '-', 'LineWidth', 1.5);
+    % arrow from x = 12 to x = 10 (pointing left)
+    % arrow from x = 12 to x = 10 (pointing left), with a bigger head
+    % --- custom left-pointing arrow from x = 12 to x = 10 ---
+xTail  = 12;           % where shaft starts (right)
+xTip   = 10;           % arrow tip (left)
+yArrow = 0.90;         % already defined above
+
+shaftEnd   = xTip + 0.3;   % where shaft meets head (leave 0.3 in N for head)
+shaftColor = [0.3 0.3 0.3];
+
+% shaft (horizontal line)
+line([xTail shaftEnd], [yArrow yArrow], ...
+     'Color', shaftColor, 'LineStyle', '-', 'LineWidth', 1.5);
+
+% triangular head
+headWidth  = 0.1;      % extent in x
+headHeight = 0.003;    % extent in y
+
+xHead = [shaftEnd, shaftEnd, xTip];
+yHead = [yArrow - headHeight, yArrow + headHeight, yArrow];
+
+patch(xHead, yHead, shaftColor, ...
+      'EdgeColor', shaftColor);
+% --- end custom arrow ---
 
     % center of the arrow text in log-x coordinates (geometric mean)
     xCenter = sqrt(10 * 12);
 
     % text with left-pointing arrow
     text(xCenter, yArrow + 0.01, ...
-         '$\leftarrow$ predicted shift of $N_c$', ...
+         '$N_c$ shift', ...
          'Interpreter', 'latex', ...
          'HorizontalAlignment', 'center', ...
          'Color', [0.2 0.2 0.2], ...
