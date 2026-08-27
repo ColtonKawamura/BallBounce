@@ -35,7 +35,7 @@ $$
 With parameters that match those in the lab:
 
 - $\hat{m}= 20$; the mass of the ball is much more than the mass of the paper-cells.
-- $\hat{gamma} = [.0006, 0023]$; damping should be included, but is not a dominating factor
+- $\hat{\gamma} = [.0006, 0023]$; damping should be included, but is not a dominating factor
 - $\hat{v}= .1$; impact kinetic energy is 10% of the potential energy of the springs.
 - $\hat{g} = 0$; gravity is not a significant factor of the experiment
 
@@ -67,11 +67,12 @@ $$
 \hat{\gamma} = \frac{\gamma}{\sqrt{k_c\, m_c}}
 $$
 
-decreasing $k_c$ would also cause a decrease in $\hat{g}$. Plotting this explicit, we see,
+decreasing $k_c$ would also cause a decrease in $\hat{\gamma}$. Plotting this explicit, we see,
 
 <img width="693" height="926" alt="image" src="https://github.com/user-attachments/assets/cac70222-5204-4038-a43f-682acd66ee27" />
 
 this causes a shift in peak to lower $N$ as well as decreasing overall restitution. 
+
 
 
 
