@@ -427,7 +427,12 @@ function [scalRatioKE, scalLambdaTheory, scalLambda_Measured] = sim1d(scalDampHa
     scalLambdaTheory = 2*(scalNumPart-1)*scalDiamChain / (scalNatFreqChain*scalDiamChain*scalTauContactTheory);
     fprintf('[analysis] Lambda_theory:   %.4f\n', scalLambdaTheory);
 
-    scalLambda_Measured = 2*(scalNumPart-1)*scalDiamChain / (scalWaveSpeed_Measured.*scalTauContact);
+    % scalLambda_Measured = 2*(scalNumPart-1)*scalDiamChain / (scalWaveSpeed_Measured.*scalTauContact);
+    % fprintf('[analysis] Lambda_measured: %.4f\n', scalLambda_Measured);
+
+    % For the master curve, use a fixed contact time tau_theory (ball-determined),
+    % not the N-dependent scalTauContact, to mimic Eq. (2) in the paper.
+    scalLambda_Measured = 2*(scalNumPart-1)*scalDiamChain / (scalWaveSpeed_Measured * scalTauContactTheory);
     fprintf('[analysis] Lambda_measured: %.4f\n', scalLambda_Measured);
 
 
