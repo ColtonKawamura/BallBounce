@@ -8,16 +8,23 @@ clear; clc;
 scalPlotMode = "etilde";   % options: "e" or "etilde"
 
 % --- parameters ---
-NArr           = 3:30;
+NArr           = 5:30;
 vecMassHat     = [20];      % ball-to-chain mass ratios
 vecVImpactHat  = [0.1];     % impact velocities
 scalGravityHat = 0;
 
 % --- spring–damping pairs: each row is [k_hat, gamma_hat] ---
+% matSpringDampHat = [ ...
+%     % 0.7,  0.03;    % set 1
+%     1.0,  0.006;     % set 2
+%     2.5,  0.0025;  % set 3
+%     % 3.5,  0.0001;  % set 4
+% ];
+
 matSpringDampHat = [ ...
-    % 0.7,  0.03;    % set 1
-    1.0,  0.006;     % set 2
-    % 2.5,  0.0025;  % set 3
+    .3,     0.006;    % set 1
+    1.0,    0.006;     % set 2
+    % 2.5,  0.006;  % set 3
     % 3.5,  0.0001;  % set 4
 ];
 % ------------------------------------------------------------
@@ -159,10 +166,10 @@ for idxPair = 1:numPairs
 end
 % =============================================================
 
-xlabel('$\\Lambda_\\text{measured}$', 'Interpreter', 'latex', 'FontSize', 20);
+xlabel('$\Lambda$', 'Interpreter', 'latex', 'FontSize', 20);
 
 if scalPlotMode == "etilde"
-    ylabel('$\\tilde{e} = (e - e_{\\infty}) / (e_{\\max} - e_{\\infty})$', ...
+    ylabel('$\tilde{e} $', ...
            'Interpreter', 'latex', 'FontSize', 18);
 else
     ylabel('$e$', 'Interpreter', 'latex', 'FontSize', 20);
@@ -176,7 +183,7 @@ legend(legendEntries, ...
 
 grid on;
 box on;
-set(gca, 'XScale', 'linear', 'YScale', 'linear');
+set(gca, 'XScale', 'log', 'YScale', 'linear');
 
 theme(gcf, 'light');
 
