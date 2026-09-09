@@ -22,8 +22,8 @@ scalGravityHat = 0;
 % ];
 
 matSpringDampHat = [ ...
-    .3,     0.006;    % set 1
-    1.0,    0.006;     % set 2
+    % .3,     0.006;    % set 1
+    1.0,    0.002;     % set 2
     % 2.5,  0.006;  % set 3
     % 3.5,  0.0001;  % set 4
 ];
@@ -186,4 +186,35 @@ box on;
 set(gca, 'XScale', 'log', 'YScale', 'linear');
 
 theme(gcf, 'light');
+
+% ---- save (N, Lambda, e_tilde, e) for this curve ----
+
+% N and e corresponding to goodIdx, sorted in the same way
+N_valid      = NArr(goodIdx);
+e_valid_plot = e(goodIdx);
+
+N_sorted = N_valid(idxSort);
+e_sorted = e_valid_plot(idxSort);
+
+% keep only nonnegative e_tilde
+idxNonNeg    = y_sorted >= 0;
+N_out        = N_sorted(idxNonNeg);
+lambda_out   = lambda_sorted(idxNonNeg);
+etilde_out   = y_sorted(idxNonNeg);
+e_out        = e_sorted(idxNonNeg);
+
+% make a table with headers
+T = table(N_out(:), lambda_out(:), etilde_out(:), e_out(:), ...
+          'VariableNames', {'N','Lambda','e_tilde','e'});
+
+% write CSV with header row
+writetable(T, '~/Desktop/curve_khat1p00_gamma0p002.csv');
+
+% ---- quick verification plot: e vs N ----
+figure; hold on;
+plot(N_out, e_out, 'o-', 'LineWidth', 1.5);
+xlabel('N');
+ylabel('e');
+grid on; box on;
+title('Verification: restitution e vs N');
 
