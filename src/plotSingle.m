@@ -1,8 +1,8 @@
-NArr           = 3:30;
+NArr           = 3:75;
 vecDampHat     = [0.005]; % needs to be at least two
-vecMassHat     = [20, 40];               % ball-to-chain mass ratios
+vecMassHat     = [1, 2];               % ball-to-chain mass ratios
 vecVImpactHat  = [0.1];           % impact velocities
-vecSpringHat   = [1];
+vecSpringHat   = [3, 4];
 
 scalGravityHat = 0;
 
