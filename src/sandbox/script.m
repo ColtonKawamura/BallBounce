@@ -35,9 +35,9 @@ sim1d(scalDampHat, 6, scalMassHat, scalSpringHat, visSim=true, plotKE=true, scal
 
 %%
 NArr           = 3:30;
-vecDampHat     = [0.016, .015];
-vecMassHat     = [1];               % ball-to-chain mass ratios
-vecVImpactHat  = [0.2];           % impact velocities
+vecDampHat     = [0.006];
+vecMassHat     = [10, 20];               % ball-to-chain mass ratios
+vecVImpactHat  = [0.1];           % impact velocities
 vecSpringHat   = [1];
 
 scalGravityHat = 0;
