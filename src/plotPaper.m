@@ -4,17 +4,17 @@ mainTwo = true;
 if mainTwo == true
     clear; clc;
 
-    NArr           = 3:30;
-    vecMassHat     = [20];      % ball-to-chain mass ratios
+    NArr           = 5:30;
+    vecMassHat     = [15];      % ball-to-chain mass ratios
     vecVImpactHat  = [0.1];     % impact velocities
     scalGravityHat = 0;
 
     % --- spring–damping pairs: each row is [k_hat, gamma_hat] ---
     matSpringDampHat = [ ...
         0.7, 0.03;     % line 1
-        1.0, 0.006;    % line 2
-        2.5, 0.0025;   % line 3
-        3.5, 0.0001;   % line 4
+        3.5, 0.006;    % line 2
+        4.0, 0.0025;   % line 3
+        4.5, 0.0001;   % line 4
         % add more rows as needed: [k_hat, gamma_hat]
     ];
     % ------------------------------------------------------------
