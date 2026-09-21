@@ -1,9 +1,9 @@
 %%  
-scalDampHat = .0006;
+scalDampHat = .0002;
 scalMassHat = 20; % ball-to-chain: if too low, contact time too short
-scalSpringHat = 2.5; % ball-to-chain: if too low, wave doesn't reach bottom
+scalSpringHat = 1; % ball-to-chain: if too low, wave doesn't reach bottom
 scalVImpactHat = 0.1; % increases contact time
-sim1d(scalDampHat, 31, scalMassHat, scalSpringHat, visSim=false, plotKE=true, scalVImpactHat=scalVImpactHat, scalGravityHat=0);
+sim1d(scalDampHat, 31, scalMassHat, scalSpringHat, visSim=true, plotKE=true, scalVImpactHat=scalVImpactHat, scalGravityHat=0);
 
 %%  
 scalDampHat = .005;
@@ -35,9 +35,9 @@ sim1d(scalDampHat, 6, scalMassHat, scalSpringHat, visSim=true, plotKE=true, scal
 
 %%
 NArr           = 3:30;
-vecDampHat     = [0.016, .015];
-vecMassHat     = [1];               % ball-to-chain mass ratios
-vecVImpactHat  = [0.2];           % impact velocities
+vecDampHat     = [0.006];
+vecMassHat     = [10, 20];               % ball-to-chain mass ratios
+vecVImpactHat  = [0.1];           % impact velocities
 vecSpringHat   = [1];
 
 scalGravityHat = 0;
