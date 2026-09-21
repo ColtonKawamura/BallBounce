@@ -1,4 +1,4 @@
-function plotMassRatioSweep()
+function plotMassRatioSweep(normalizeByPredPeak)
 % plotMassRatioSweep: Task 1 bar-theory baseline
 %
 % Show how the restitution peak in e(N) shifts with the ball-to-chain mass
@@ -22,24 +22,33 @@ function plotMassRatioSweep()
 % (mHat, N_peak, N_peak-1, 0.6*mHat) so it can be compared against the
 % bar-theory scaling N_peak - 1 ~ 0.6 * mHat.
 %
-% All three e(N) curves are drawn on a single figure (distinct colors,
-% markers and legend entries, plotSingle.m-style formatting) with each
-% interior peak marked, and saved to <repo>/figures/massRatioSweep.png
-% (created if needed).
+% All three e(N) curves are drawn on a single figure with:
+%   - red lines
+%   - square markers on the lines
+%   - square marker size strongly increasing with mass ratio
+%   - red stars at the predicted peak positions ONLY on the non-normalized plot
+% and saved to <repo>/figures/massRatioSweep.png (created if needed).
+%
+% Optional argument:
+%   normalizeByPredPeak (logical, default false)
+%     false: x-axis is N, red stars at predicted peaks are shown
+%     true:  x-axis is N / N_pred, NO red stars are plotted
+
+    if nargin < 1
+        normalizeByPredPeak = false;
+    end
 
     %% fixed parameters (same as plotSingle.m / plotPaper.m)
     NArr           = 3:30;
     vecMassHat     = [10, 12, 16];   % ball-to-chain mass ratios to sweep, [10, 12, 16] was good
-    scalSpringHat  = 4;            % k_b/k_c [4] was good
+    scalSpringHat  = 4;              % k_b/k_c [4] was good
     scalDampHat    = 0.0025;         % gamma_hat [.0025] was good
     scalVImpactHat = 0.1;            % v_hat
     scalGravityHat = 0;              % g_hat
 
-    %% distinct color / marker per mass ratio
-    vecColors  = [0.00  0.447 0.741; ...   % blue
-                  0.850 0.325 0.098; ...   % orange
-                  0.466 0.674 0.188];      % green
-    vecMarkers = {'o', 's', 'd'};
+    % marker-size scaling based on mass ratio
+    baseMarkerSize = 6;                      % size for the smallest mass ratio
+    minMassHat     = min(vecMassHat);
 
     figure; hold on;
 
@@ -60,7 +69,7 @@ function plotMassRatioSweep()
         % restitution e(N): e^2 = KE ratio (same as existing plotting code)
         e = sqrt(max(ratios, 0));
 
-        % peak: first interior local maximum (skip the N = 3 boundary)
+        % measured peak: first interior local maximum (skip the N = 3 boundary)
         idxPeak = NaN;
         for i = 2:numel(NArr)-1
             if e(i) > e(i-1) && e(i) > e(i+1)
@@ -73,22 +82,44 @@ function plotMassRatioSweep()
             matNDelta(idxMass) = NArr(idxPeak) - 1;
         end
 
-        semilogx(NArr, e, ...
+        % predicted peak location from bar theory: N_peak - 1 ~ 0.6 * mHat
+        predNPeak = 1 + 0.6 * scalMassHat;
+        [~, idxPredPeak] = min(abs(NArr - predNPeak));  % nearest integer N in NArr
+
+        % choose x-values: either raw N, or normalized N / N_pred
+        if normalizeByPredPeak
+            xVals = NArr / predNPeak;
+            xStar = NArr(idxPredPeak) / predNPeak;  % should be ~1 (not used for star in normalized plot)
+        else
+            xVals = NArr;
+            xStar = NArr(idxPredPeak);
+        end
+
+        % marker size for this mass ratio (larger mass -> much larger squares)
+        scaleFactor     = scalMassHat / minMassHat;
+        markerSizeCurve = baseMarkerSize * (scaleFactor^2);   % quadratic scaling for larger differences
+
+        % red line with square markers
+        semilogx(xVals, e, ...
             'LineWidth', 1.5, ...
-            'Color', vecColors(idxMass,:), ...
-            'Marker', vecMarkers{idxMass}, ...
-            'MarkerSize', 8, ...
+            'Color', 'r', ...
+            'Marker', 's', ...
+            'MarkerSize', markerSizeCurve, ...
             'LineStyle', '-', ...
             'DisplayName', sprintf('$\\hat{m} = %.0f$', scalMassHat));
 
-        % mark the interior peak
-        if ~isnan(idxPeak)
-            semilogx(NArr(idxPeak), e(idxPeak), 'k^', ...
+        % mark the PREDICTED peak (red star at theoretical location) ONLY in non-normalized plot
+        if ~normalizeByPredPeak && ~isnan(idxPredPeak)
+            semilogx(xStar, e(idxPredPeak), 'r*', ...
                 'MarkerSize', 12, 'LineWidth', 1.5);
         end
     end
 
-    xlabel('$N$', 'Interpreter', 'latex', 'FontSize', 20);
+    if normalizeByPredPeak
+        xlabel('$N / N_{\mathrm{pred}}$', 'Interpreter', 'latex', 'FontSize', 20);
+    else
+        xlabel('$N$', 'Interpreter', 'latex', 'FontSize', 20);
+    end
     ylabel('$e$', 'Interpreter', 'latex', 'FontSize', 20);
     legend('show', 'Location', 'best', 'Interpreter', 'latex', 'FontSize', 13);
     grid on;
@@ -123,3 +154,4 @@ function plotMassRatioSweep()
     print(figPath, '-dpng', '-r150');
     fprintf('[plotMassRatioSweep] Saved figure to %s\n', figPath);
 end
+
