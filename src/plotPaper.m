@@ -126,8 +126,8 @@ if mainTwo == true
 
     % --- HARD-CODED VERTICAL DOTTED LINES AND ARROW ON MAIN AXES ---
     % vertical dotted lines at x = 10 and x = 12 (gray)
-    hX1 = xline(10, 'LineStyle', ':', 'Color', [0.3 0.3 0.3], 'LineWidth', 1.5);
-    hX2 = xline(12, 'LineStyle', ':', 'Color', [0.3 0.3 0.3], 'LineWidth', 1.5);
+    hX1 = xline(8, 'LineStyle', ':', 'Color', [0.3 0.3 0.3], 'LineWidth', 1.5);
+    hX2 = xline(10, 'LineStyle', ':', 'Color', [0.3 0.3 0.3], 'LineWidth', 1.5);
 
     % remove vertical lines from legend
     hX1.Annotation.LegendInformation.IconDisplayStyle = 'off';
