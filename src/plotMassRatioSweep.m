@@ -29,9 +29,9 @@ function plotMassRatioSweep()
 
     %% fixed parameters (same as plotSingle.m / plotPaper.m)
     NArr           = 3:30;
-    vecMassHat     = [10, 20, 40];   % ball-to-chain mass ratios to sweep
-    scalSpringHat  = 2.5;            % k_b/k_c
-    scalDampHat    = 0.0025;         % gamma_hat
+    vecMassHat     = [10, 12, 16];   % ball-to-chain mass ratios to sweep, [10, 12, 16] was good
+    scalSpringHat  = 4;            % k_b/k_c [4] was good
+    scalDampHat    = 0.0025;         % gamma_hat [.0025] was good
     scalVImpactHat = 0.1;            % v_hat
     scalGravityHat = 0;              % g_hat
 
