@@ -14,7 +14,7 @@ if mainTwo == true
         0.7, 0.03;     % line 1
         3.5, 0.006;    % line 2
         4.0, 0.0025;   % line 3
-        4.5, 0.0001;   % line 4
+        5, 0.0001;   % line 4
         % add more rows as needed: [k_hat, gamma_hat]
     ];
     % ------------------------------------------------------------
@@ -98,7 +98,7 @@ if mainTwo == true
     legendLabels = cell(numPairs,1);
 
     for idxPair = 1:numPairs
-        legendLabels{idxPair} = sprintf('$\\hat{k}=%.2f,\\ \\hat{\\gamma}=%.3f$', ...
+        legendLabels{idxPair} = sprintf('$\\hat{k}=%.2f,\\ \\hat{\\zeta}=%.3f$', ...
                                         matSpringDampHat(idxPair,1), matSpringDampHat(idxPair,2));
 
         % dummy line: NaN data so nothing is drawn, but style shows in legend
@@ -134,11 +134,11 @@ if mainTwo == true
     hX2.Annotation.LegendInformation.IconDisplayStyle = 'off';
 
     % fixed y-position for the horizontal arrow line (fits in [0.76, 0.92])
-    yArrow = 0.90;
+    yArrow = 0.87;
 
     % --- custom left-pointing arrow from x = 12 to x = 10 ---
-    xTail  = 12;           % where shaft starts (right)
-    xTip   = 10;           % arrow tip (left)
+    xTail  = 10;           % where shaft starts (right)
+    xTip   = 8;           % arrow tip (left)
     shaftEnd   = xTip + 0.3;   % where shaft meets head
     shaftColor = [0.3 0.3 0.3];
 
@@ -160,7 +160,7 @@ if mainTwo == true
     hHead.Annotation.LegendInformation.IconDisplayStyle  = 'off';
 
     % center of the arrow text in log-x coordinates (geometric mean)
-    xCenter = sqrt(10 * 12);
+    xCenter = sqrt(8 * 10);
 
     % text label
     text(xCenter, yArrow + 0.01, ...
@@ -308,7 +308,7 @@ else
                     'Marker', 'o', ...
                     'MarkerSize', vecMarkerSize(idxPair), ...
                     'LineStyle', scalLineStyle{1}, ...
-                    'DisplayName', sprintf('$\\hat{k}=%.2f,\\ \\hat{\\gamma}=%.3f$', ...
+                    'DisplayName', sprintf('$\\hat{k}=%.2f,\\ \\hat{\\zeta}=%.3f$', ...
                                            scalSpringHat, scalDampHat), ...
                     'Tag', 'dataLine');   % <--- added tag
             end
