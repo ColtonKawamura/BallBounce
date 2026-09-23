@@ -5,7 +5,8 @@ function plotMassRatioSweep(normalizeByPredPeak)
 %   normalizeByPredPeak (logical, default false)
 %     false: x-axis is N, red stars at predicted peaks are shown
 %     true:  x-axis is N / N_pred, NO red stars on main axes,
-%            but a bottom-left INSET shows non-normalized e(N) with stars.
+%            but a bottom-left INSET shows non-normalized e(N) (no stars),
+%            zoomed to N ∈ [6,13].
 
     if nargin < 1
         normalizeByPredPeak = false;
@@ -34,7 +35,7 @@ function plotMassRatioSweep(normalizeByPredPeak)
     matNPeak  = nan(numMass, 1);
     matNDelta = nan(numMass, 1);
 
-    % store e(N) and predicted-peak info for inset
+    % store e(N) and predicted-peak info for inset/normalization
     eAll           = nan(numMass, numel(NArr));
     vecPredNPeak   = nan(numMass, 1);
     vecIdxPredPeak = nan(numMass, 1);
@@ -69,8 +70,10 @@ function plotMassRatioSweep(normalizeByPredPeak)
 
         % predicted peak location from bar theory: N_peak - 1 ~ 0.6 * mHat
         predNPeak = 1 + 0.6 * scalMassHat;
-        [~, idxPredPeak] = min(abs(NArr - predNPeak));  % nearest integer N
-        vecPredNPeak(idxMass)   = predNPeak;
+        vecPredNPeak(idxMass) = predNPeak;
+
+        % nearest integer NArr to predicted peak
+        [~, idxPredPeak] = min(abs(NArr - predNPeak));
         vecIdxPredPeak(idxMass) = idxPredPeak;
 
         % choose x-values: either raw N, or normalized N / N_pred
@@ -121,57 +124,63 @@ function plotMassRatioSweep(normalizeByPredPeak)
                   scalSpringHat, scalDampHat, scalVImpactHat), ...
           'Interpreter', 'latex', 'FontSize', 16);
 
-    %% INSET: non-normalized e(N) with stars, only when normalizeByPredPeak == true
+    %% INSET: non-normalized e(N), no stars, zoom N ∈ [6,13],
+    %% only when normalizeByPredPeak == true
     if normalizeByPredPeak
         % bottom-left inset: [left bottom width height] in figure-normalized units
         insetAx = axes('Units', 'normalized', ...
-                       'Position', [0.18 0.22 0.30 0.30]);  % small panel bottom-left
+                       'Position', [0.22 0.28 0.30 0.30]);  % small panel bottom-left
         hold(insetAx, 'on');
         box(insetAx, 'on');
         set(insetAx, 'Color', 'none');  % transparent background
 
-        % plot non-normalized curves on inset from stored eAll
+        % zoom mask for N ∈ [6,13]
+        maskZoom = (NArr >= 6) & (NArr <= 13);
+
+        % plot non-normalized curves on inset from stored eAll,
+        % but ONLY for N in [6,13], and with NO stars
         for idxMass = 1:numMass
             scalMassHat = vecMassHat(idxMass);
             e           = eAll(idxMass, :);
-            idxPredPeak = vecIdxPredPeak(idxMass);
+
+            NZoom = NArr(maskZoom);
+            eZoom = e(maskZoom);
 
             % marker size for this mass ratio (same scaling as main axes)
             scaleFactor     = scalMassHat / minMassHat;
             markerSizeCurve = baseMarkerSize * (scaleFactor^2);
 
-            % non-normalized curve: x = NArr
-            semilogx(insetAx, NArr, e, ...
+            % zoomed curve: x = NZoom (no stars)
+            semilogx(insetAx, NZoom, eZoom, ...
                 'LineWidth', 1.5, ...
                 'Color', [0.65 0.00 0.30], ...
                 'Marker', 's', ...
                 'MarkerSize', markerSizeCurve, ...
                 'LineStyle', '-');
-
-            % red star at predicted peak on inset
-            if ~isnan(idxPredPeak)
-                xStarInset = NArr(idxPredPeak);
-                semilogx(insetAx, xStarInset, e(idxPredPeak), 'r*', ...
-                    'MarkerSize', 10, 'LineWidth', 1.5);
-            end
         end
 
-        % log x-scale and N-range
+        % log x-scale and zoomed N-range
         set(insetAx, 'XScale', 'log');
-        xlim(insetAx, [NArr(1), NArr(end)]);
+        xlim(insetAx, [6 13]);
 
-        % auto y-limits from stored eAll
-        allE = eAll(:);
-        allE = allE(~isnan(allE));
-        if ~isempty(allE)
-            ymin = min(allE);
-            ymax = max(allE);
+        % y-limits based ONLY on zoomed data
+        allE_zoom = eAll(:, maskZoom);
+        allE_zoom = allE_zoom(~isnan(allE_zoom));
+        if ~isempty(allE_zoom)
+            ymin = min(allE_zoom);
+            ymax = max(allE_zoom);
             pad  = 0.02 * (ymax - ymin);
             ylim(insetAx, [ymin - pad, ymax + pad]);
         end
 
-        % simplify inset (no labels, smaller font)
-        set(insetAx, 'XTickLabel', [], 'YTickLabel', []);
+        % axis labels for inset (with tick numbers)
+        xlabel(insetAx, '$N$', 'Interpreter', 'latex', 'FontSize', 11);
+        ylabel(insetAx, '$e$', 'Interpreter', 'latex', 'FontSize', 11);
+
+        % ensure tick labels are shown (override any previous blanking)
+        set(insetAx, 'XTickLabelMode', 'auto', 'YTickLabelMode', 'auto');
+
+        % smaller ticks / font on inset
         set(insetAx, 'FontSize', 10);
         grid(insetAx, 'on');
         box(insetAx, 'on');
@@ -183,16 +192,16 @@ function plotMassRatioSweep(normalizeByPredPeak)
         axes(mainAx);
     end
 
-    %% peak table: mHat, N_peak, N_peak-1, 0.6*mHat
+    %% peak table: measured vs bar-theory
     fprintf('\n=== Mass-ratio sweep: restitution peak (bar-theory baseline) ===\n');
     fprintf('Parameters: k_hat=%.2f, gamma_hat=%.4f, v_hat=%.2f, g_hat=%.1f, N=%d:%d\n', ...
             scalSpringHat, scalDampHat, scalVImpactHat, scalGravityHat, ...
             NArr(1), NArr(end));
-    fprintf('Peak = first interior local maximum of e(N) (N=%d boundary excluded).\n', ...
+    fprintf('Measured peak = first interior local maximum of e(N) (N=%d boundary excluded).\n', ...
             NArr(1));
-    fprintf('%8s %10s %12s %12s\n', 'mHat', 'N_peak', 'N_peak-1', '0.6*mHat');
+    fprintf('%8s %12s %12s %12s\n', 'mHat', 'N_peak(meas)', 'N_peak-1', '0.6*mHat');
     for idxMass = 1:numMass
-        fprintf('%8.0f %10.0f %12.0f %12.2f\n', ...
+        fprintf('%8.0f %12.0f %12.0f %12.2f\n', ...
             vecMassHat(idxMass), matNPeak(idxMass), matNDelta(idxMass), ...
             0.6 * vecMassHat(idxMass));
     end
