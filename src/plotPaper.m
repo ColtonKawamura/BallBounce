@@ -4,17 +4,17 @@ mainTwo = true;
 if mainTwo == true
     clear; clc;
 
-    NArr           = 5:30;
-    vecMassHat     = [15];      % ball-to-chain mass ratios
+    NArr           = 3:30;
+    vecMassHat     = [20];      % ball-to-chain mass ratios
     vecVImpactHat  = [0.1];     % impact velocities
     scalGravityHat = 0;
 
     % --- spring–damping pairs: each row is [k_hat, gamma_hat] ---
     matSpringDampHat = [ ...
         0.7, 0.03;     % line 1
-        3.5, 0.006;    % line 2
-        4.0, 0.0025;   % line 3
-        5, 0.0001;   % line 4
+        1.0, 0.006;    % line 2
+        2.5, 0.0025;   % line 3
+        3.5, 0.0001;   % line 4
         % add more rows as needed: [k_hat, gamma_hat]
     ];
     % ------------------------------------------------------------
@@ -98,7 +98,7 @@ if mainTwo == true
     legendLabels = cell(numPairs,1);
 
     for idxPair = 1:numPairs
-        legendLabels{idxPair} = sprintf('$\\hat{k}=%.2f,\\ \\hat{\\zeta}=%.3f$', ...
+        legendLabels{idxPair} = sprintf('$\\hat{k}=%.2f,\\ \\hat{\\gamma}=%.3f$', ...
                                         matSpringDampHat(idxPair,1), matSpringDampHat(idxPair,2));
 
         % dummy line: NaN data so nothing is drawn, but style shows in legend
@@ -126,19 +126,19 @@ if mainTwo == true
 
     % --- HARD-CODED VERTICAL DOTTED LINES AND ARROW ON MAIN AXES ---
     % vertical dotted lines at x = 10 and x = 12 (gray)
-    hX1 = xline(8, 'LineStyle', ':', 'Color', [0.3 0.3 0.3], 'LineWidth', 1.5);
-    hX2 = xline(10, 'LineStyle', ':', 'Color', [0.3 0.3 0.3], 'LineWidth', 1.5);
+    hX1 = xline(10, 'LineStyle', ':', 'Color', [0.3 0.3 0.3], 'LineWidth', 1.5);
+    hX2 = xline(12, 'LineStyle', ':', 'Color', [0.3 0.3 0.3], 'LineWidth', 1.5);
 
     % remove vertical lines from legend
     hX1.Annotation.LegendInformation.IconDisplayStyle = 'off';
     hX2.Annotation.LegendInformation.IconDisplayStyle = 'off';
 
     % fixed y-position for the horizontal arrow line (fits in [0.76, 0.92])
-    yArrow = 0.87;
+    yArrow = 0.90;
 
     % --- custom left-pointing arrow from x = 12 to x = 10 ---
-    xTail  = 10;           % where shaft starts (right)
-    xTip   = 8;           % arrow tip (left)
+    xTail  = 12;           % where shaft starts (right)
+    xTip   = 10;           % arrow tip (left)
     shaftEnd   = xTip + 0.3;   % where shaft meets head
     shaftColor = [0.3 0.3 0.3];
 
@@ -160,7 +160,7 @@ if mainTwo == true
     hHead.Annotation.LegendInformation.IconDisplayStyle  = 'off';
 
     % center of the arrow text in log-x coordinates (geometric mean)
-    xCenter = sqrt(8 * 10);
+    xCenter = sqrt(10 * 12);
 
     % text label
     text(xCenter, yArrow + 0.01, ...
@@ -308,7 +308,7 @@ else
                     'Marker', 'o', ...
                     'MarkerSize', vecMarkerSize(idxPair), ...
                     'LineStyle', scalLineStyle{1}, ...
-                    'DisplayName', sprintf('$\\hat{k}=%.2f,\\ \\hat{\\zeta}=%.3f$', ...
+                    'DisplayName', sprintf('$\\hat{k}=%.2f,\\ \\hat{\\gamma}=%.3f$', ...
                                            scalSpringHat, scalDampHat), ...
                     'Tag', 'dataLine');   % <--- added tag
             end
